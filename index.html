@@ -1009,8 +1009,7 @@
 
         <button class="create-btn" id="createBtn">+</button>
         <div class="create-menu hidden" id="createMenu">
-            <button id="createPhotoBtn">📸</button>
-            <button id="createVideoBtn">🎬</button>
+            <button id="createGalleryBtn">🖼️ Галерея</button>
         </div>
     </div>
 
@@ -1059,9 +1058,7 @@
         </div>
     </div>
 
-    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
-    <input type="file" id="videoInput" accept="video/*" capture="environment" style="display:none">
-    <canvas id="previewCanvas" style="display:none;"></canvas>
+    <input type="file" id="galleryInput" accept="image/*,video/*" style="display:none">
 
     <script>
         // Генерация частиц
@@ -2047,36 +2044,31 @@
                 document.getElementById('createBtn').addEventListener('click', function() {
                     document.getElementById('createMenu').classList.toggle('hidden');
                 });
-                document.getElementById('createPhotoBtn').addEventListener('click', function() {
-                    document.getElementById('photoInput').click();
-                });
-                document.getElementById('createVideoBtn').addEventListener('click', function() {
-                    document.getElementById('videoInput').click();
+
+                // Только галерея
+                document.getElementById('createGalleryBtn').addEventListener('click', function() {
+                    document.getElementById('galleryInput').click();
+                    document.getElementById('createMenu').classList.add('hidden');
                 });
 
-                document.getElementById('photoInput').addEventListener('change', function(e) {
+                // Обработка выбора из галереи (автоопределение типа)
+                document.getElementById('galleryInput').addEventListener('change', function(e) {
                     if (e.target.files && e.target.files[0]) {
                         var file = e.target.files[0];
+                        var type = file.type;
                         var reader = new FileReader();
+                        
                         reader.onload = function(ev) {
                             var dataUrl = ev.target.result;
-                            createPost('image', dataUrl, null);
+                            if (type.startsWith('video/')) {
+                                createPost('video', dataUrl, file);
+                            } else if (type.startsWith('image/')) {
+                                createPost('image', dataUrl, null);
+                            } else {
+                                alert('Неподдерживаемый формат файла');
+                            }
                             document.getElementById('createMenu').classList.add('hidden');
-                            document.getElementById('photoInput').value = '';
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
-
-                document.getElementById('videoInput').addEventListener('change', function(e) {
-                    if (e.target.files && e.target.files[0]) {
-                        var file = e.target.files[0];
-                        var reader = new FileReader();
-                        reader.onload = function(ev) {
-                            var dataUrl = ev.target.result;
-                            createPost('video', dataUrl, file);
-                            document.getElementById('createMenu').classList.add('hidden');
-                            document.getElementById('videoInput').value = '';
+                            document.getElementById('galleryInput').value = '';
                         };
                         reader.readAsDataURL(file);
                     }
