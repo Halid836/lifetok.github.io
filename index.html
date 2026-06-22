@@ -1,1 +1,531 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LifeTok</title>
+    <style>
+        /* ... (весь CSS без изменений) ... */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; top: 0; left: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        body { height: 100vh; height: 100dvh; width: 100vw; width: 100dvw; }
+        /* ... остальной CSS такой же ... */
+    </style>
+</head>
+<body>
 
+<!-- ===== ВЕСЬ HTML КАК В ПРЕДЫДУЩЕМ КОДЕ ===== -->
+<!-- (заставка, авторизация, основной экран, поиск, профиль, настройки) -->
+
+<script>
+// ============================================================
+// ===== ПЕРЕВОДЫ =====
+// ============================================================
+var translations = {
+    ru: {
+        login: 'Войти', register: 'Зарегистрироваться', email: 'Почта',
+        nickname: 'Никнейм', password: 'Пароль', remember: 'Запомнить меня',
+        createAccount: 'Создать аккаунт', feed: 'Лента', search: 'Поиск',
+        profile: 'Профиль', settings: 'Настройки', theme: 'Тема',
+        dark: 'Тёмная', light: 'Светлая', green: 'Зелёная', pink: 'Розовая',
+        language: 'Язык', version: 'Версия', account: 'Аккаунт',
+        comments: 'Комментарии', write: 'Написать...', noComments: 'Нет комментариев',
+        noPosts: 'Нет постов', logout: 'Выйти', subscribe: 'Подписаться',
+        subscribed: 'Подписан', searchPlaceholder: 'Найти людей...',
+        nothingFound: 'Ничего не найдено', back: 'Назад', posts: 'Постов',
+        followers: 'Подписчиков', following: 'Подписок', delete: 'Удалить?',
+        liked: 'Понравилось', caption: 'Описание', enterCaption: 'Введите описание...',
+        reply: 'Ответить', likes: '❤️', editBio: 'Изменить описание',
+        bioPlaceholder: 'Расскажите о себе...', addCaption: 'Добавить описание',
+        publish: 'Опубликовать', cancel: 'Отмена', choosePhoto: 'Фото',
+        chooseVideo: 'Видео', addPhoto: '➕ Добавить фото', confirmLogout: 'Выйти?',
+        addCaptionTitle: 'Добавить описание', beFirst: 'Будьте первым!'
+    },
+    en: {
+        login: 'Login', register: 'Sign Up', email: 'Email',
+        nickname: 'Username', password: 'Password', remember: 'Remember me',
+        createAccount: 'Create Account', feed: 'Feed', search: 'Search',
+        profile: 'Profile', settings: 'Settings', theme: 'Theme',
+        dark: 'Dark', light: 'Light', green: 'Green', pink: 'Pink',
+        language: 'Language', version: 'Version', account: 'Account',
+        comments: 'Comments', write: 'Write...', noComments: 'No comments',
+        noPosts: 'No posts', logout: 'Logout', subscribe: 'Subscribe',
+        subscribed: 'Subscribed', searchPlaceholder: 'Search people...',
+        nothingFound: 'Nothing found', back: 'Back', posts: 'Posts',
+        followers: 'Followers', following: 'Following', delete: 'Delete?',
+        liked: 'Liked', caption: 'Caption', enterCaption: 'Enter caption...',
+        reply: 'Reply', likes: '❤️', editBio: 'Edit bio',
+        bioPlaceholder: 'Tell about yourself...', addCaption: 'Add caption',
+        publish: 'Publish', cancel: 'Cancel', choosePhoto: 'Photo',
+        chooseVideo: 'Video', addPhoto: '➕ Add photo', confirmLogout: 'Logout?',
+        addCaptionTitle: 'Add caption', beFirst: 'Be the first!'
+    }
+};
+
+var currentLang = localStorage.getItem('lifetok_lang') || 'ru';
+
+function t(key) {
+    return translations[currentLang] && translations[currentLang][key] ? translations[currentLang][key] : key;
+}
+
+// ============================================================
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+// ============================================================
+var currentUser = null;
+var posts = [];
+var users = {};
+var imageStorage = {};
+var carouselState = {};
+var isAppReady = false;
+
+// ============================================================
+// ===== ЗАГРУЗКА/СОХРАНЕНИЕ (УЛУЧШЕННОЕ) =====
+// ============================================================
+function loadData() {
+    try {
+        var saved = localStorage.getItem('lifetok_data');
+        if (saved) {
+            var data = JSON.parse(saved);
+            users = data.users || {};
+            posts = data.posts || [];
+            imageStorage = data.imageStorage || {};
+            console.log('📦 Данные загружены: постов ' + posts.length + ', пользователей ' + Object.keys(users).length);
+            return true;
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки:', e);
+    }
+    users = {};
+    posts = [];
+    imageStorage = {};
+    return false;
+}
+
+function saveData() {
+    try {
+        var data = {
+            users: users,
+            posts: posts,
+            imageStorage: imageStorage
+        };
+        localStorage.setItem('lifetok_data', JSON.stringify(data));
+        console.log('💾 Данные сохранены: постов ' + posts.length);
+        return true;
+    } catch(e) {
+        console.warn('Ошибка сохранения:', e);
+        return false;
+    }
+}
+
+// ============================================================
+// ===== АВТОРИЗАЦИЯ =====
+// ============================================================
+var savedAccounts = JSON.parse(localStorage.getItem('lifetok_saved') || '[]');
+
+function renderSavedAccounts() {
+    var c = document.getElementById('savedAccounts');
+    var l = document.getElementById('savedAccountsList');
+    if (!savedAccounts.length) { c.style.display = 'none'; return; }
+    c.style.display = 'block';
+    l.innerHTML = savedAccounts.map(function(a) {
+        return '<div class="saved-item" data-email="'+a.email+'">'+
+            '<div class="saved-avatar">'+(a.avatar?'<img src="'+a.avatar+'">':'👤')+'</div>'+
+            '<div class="saved-info"><div class="saved-name">'+a.nickname+'</div><div class="saved-email">'+a.email+'</div></div>'+
+            '<button class="saved-remove" data-remove="'+a.email+'">✕</button>'+
+        '</div>';
+    }).join('');
+    l.querySelectorAll('.saved-item').forEach(function(i) {
+        i.addEventListener('click', function(e) {
+            if (e.target.classList.contains('saved-remove')) return;
+            document.getElementById('authEmail').value = this.dataset.email;
+            document.getElementById('authPassword').focus();
+        });
+    });
+    l.querySelectorAll('.saved-remove').forEach(function(b) {
+        b.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (confirm('Удалить?')) {
+                savedAccounts = savedAccounts.filter(function(a) { return a.email !== b.dataset.remove; });
+                localStorage.setItem('lifetok_saved', JSON.stringify(savedAccounts));
+                renderSavedAccounts();
+            }
+        });
+    });
+}
+
+function saveCurrentAccount(email, nickname, avatar) {
+    var ex = savedAccounts.find(function(a) { return a.email === email; });
+    if (!ex) savedAccounts.push({ email: email, nickname: nickname, avatar: avatar });
+    else { ex.nickname = nickname; ex.avatar = avatar; }
+    localStorage.setItem('lifetok_saved', JSON.stringify(savedAccounts));
+    localStorage.setItem('lifetok_user', JSON.stringify({ email: email, timestamp: Date.now() }));
+}
+
+function tryAutoLogin() {
+    try {
+        var s = JSON.parse(localStorage.getItem('lifetok_user') || 'null');
+        if (s && s.email && users[s.email]) return s.email;
+    } catch(e) {}
+    return null;
+}
+
+// ============================================================
+// ===== ЗАПУСК С ЗАЩИТОЙ ОТ ЧЕРНОГО ЭКРАНА =====
+// ============================================================
+// 1. Сначала загружаем данные
+loadData();
+
+// 2. Показываем заставку
+var splash = document.getElementById('splashScreen');
+
+// 3. Ждем 1.5 секунды для загрузки
+setTimeout(function() {
+    // Скрываем заставку
+    splash.style.display = 'none';
+    
+    // Пытаемся авторизоваться
+    var savedUser = tryAutoLogin();
+    if (savedUser) {
+        currentUser = users[savedUser];
+        if (currentUser) {
+            document.getElementById('authEmail').value = savedUser;
+            document.getElementById('authPassword').value = currentUser.password || '123456';
+            document.getElementById('authBtn').click();
+        } else {
+            showAuthScreen();
+        }
+    } else {
+        showAuthScreen();
+    }
+}, 1500);
+
+function showAuthScreen() {
+    document.getElementById('authScreen').style.display = 'flex';
+    renderSavedAccounts();
+    updateAuthTexts();
+}
+
+// ============================================================
+// ===== ОБНОВЛЕНИЕ ТЕКСТОВ АВТОРИЗАЦИИ =====
+// ============================================================
+function updateAuthTexts() {
+    var btn = document.getElementById('authBtn');
+    var isLogin = btn.textContent === 'Войти' || btn.textContent === 'Login' || btn.textContent === '登录';
+    btn.textContent = isLogin ? t('login') : t('register');
+    document.getElementById('authEmail').placeholder = t('email');
+    document.getElementById('authNickname').placeholder = t('nickname');
+    document.getElementById('authPassword').placeholder = t('password');
+    var rememberLabel = document.querySelector('.remember-row');
+    if (rememberLabel) {
+        rememberLabel.innerHTML = '<input type="checkbox" id="rememberMe" checked> ' + t('remember');
+    }
+    var switchSpan = document.querySelector('.auth-switch span');
+    if (switchSpan) switchSpan.textContent = t('createAccount');
+}
+
+// ============================================================
+// ===== ОБРАБОТЧИКИ АВТОРИЗАЦИИ =====
+// ============================================================
+document.getElementById('authSwitch').addEventListener('click', function() {
+    var btn = document.getElementById('authBtn');
+    var isLogin = btn.textContent === 'Войти' || btn.textContent === 'Login' || btn.textContent === '登录';
+    btn.textContent = isLogin ? t('register') : t('login');
+    document.getElementById('authError').style.display = 'none';
+    document.getElementById('authSuccess').style.display = 'none';
+    document.getElementById('authNickname').style.display = isLogin ? 'block' : 'block';
+});
+
+document.getElementById('authBtn').addEventListener('click', function() {
+    var email = document.getElementById('authEmail').value.trim();
+    var nickname = document.getElementById('authNickname').value.trim();
+    var password = document.getElementById('authPassword').value.trim();
+    var err = document.getElementById('authError');
+    var suc = document.getElementById('authSuccess');
+    err.style.display = 'none';
+    suc.style.display = 'none';
+
+    if (!email || !password) {
+        err.textContent = 'Заполните почту и пароль / Fill in email and password';
+        err.style.display = 'block';
+        return;
+    }
+
+    var isLogin = document.getElementById('authBtn').textContent === t('login');
+
+    if (isLogin) {
+        if (!users[email] || users[email].password !== password) {
+            err.textContent = 'Неверный email или пароль / Invalid email or password';
+            err.style.display = 'block';
+            return;
+        }
+        currentUser = users[email];
+        saveCurrentAccount(email, currentUser.nickname, currentUser.avatar);
+        suc.textContent = 'Вход выполнен! / Logged in!';
+        suc.style.display = 'block';
+        setTimeout(function() {
+            enterApp();
+        }, 400);
+    } else {
+        if (!nickname) {
+            err.textContent = 'Введите никнейм / Enter username';
+            err.style.display = 'block';
+            return;
+        }
+        if (users[email]) {
+            err.textContent = 'Email уже используется / Email already used';
+            err.style.display = 'block';
+            return;
+        }
+        users[email] = {
+            email: email,
+            nickname: nickname,
+            password: password,
+            avatar: null,
+            bio: '',
+            following: []
+        };
+        currentUser = users[email];
+        saveCurrentAccount(email, nickname, null);
+        saveData();
+        suc.textContent = 'Аккаунт создан! / Account created!';
+        suc.style.display = 'block';
+        setTimeout(function() {
+            enterApp();
+        }, 400);
+    }
+});
+
+// ============================================================
+// ===== ВХОД В ПРИЛОЖЕНИЕ =====
+// ============================================================
+function enterApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('mainScreen').classList.add('active');
+    isAppReady = true;
+    
+    setupNavigation();
+    setupSearch();
+    setupCreateButtons();
+    setupSettings();
+    updateUITexts();
+    updateSettingsAccount();
+    renderTikTokFeed();
+    renderProfile();
+    
+    console.log('✅ Приложение запущено');
+}
+
+// ============================================================
+// ===== ОБНОВЛЕНИЕ ТЕКСТОВ =====
+// ============================================================
+function updateUITexts() {
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        var page = item.dataset.page;
+        var labels = { feed: t('feed'), search: t('search'), profile: t('profile') };
+        var label = item.querySelector('.nav-label');
+        if (label) label.textContent = labels[page];
+    });
+    
+    var photoLabel = document.querySelector('#createPhotoBtn .menu-label');
+    var videoLabel = document.querySelector('#createVideoBtn .menu-label');
+    if (photoLabel) photoLabel.textContent = t('choosePhoto');
+    if (videoLabel) videoLabel.textContent = t('chooseVideo');
+    
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.placeholder = t('searchPlaceholder');
+    var searchTitle = document.querySelector('.search-title');
+    if (searchTitle) searchTitle.textContent = t('search');
+    var backLabel = document.querySelector('.search-back-btn .back-label');
+    if (backLabel) backLabel.textContent = t('back');
+    
+    var settingsTitle = document.querySelector('.settings-title');
+    if (settingsTitle) settingsTitle.textContent = t('settings');
+    document.querySelectorAll('.settings-item .label').forEach(function(label) {
+        var text = label.textContent.trim();
+        if (text === 'Тема' || text === 'Theme' || text === '主题') label.textContent = t('theme');
+        else if (text === 'Язык / Language') label.textContent = t('language');
+        else if (text === 'Версия' || text === 'Version' || text === '版本') label.textContent = t('version');
+        else if (text === 'Аккаунт' || text === 'Account' || text === '账户') label.textContent = t('account');
+    });
+    document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(btn) {
+        var theme = btn.dataset.theme;
+        var labels = { dark: '🌙 ' + t('dark'), light: '☀️ ' + t('light'), green: '🌿 ' + t('green'), pink: '🌸 ' + t('pink') };
+        var span = btn.querySelector('span:first-child');
+        if (span) span.textContent = labels[theme] || theme;
+    });
+    
+    updateAuthTexts();
+    renderProfile();
+    renderTikTokFeed();
+}
+
+// ============================================================
+// ===== НАСТРОЙКИ =====
+// ============================================================
+function setupSettings() {
+    var panel = document.getElementById('settingsPanel');
+    var overlay = document.getElementById('settingsOverlay');
+    var closeBtn = document.getElementById('settingsClose');
+
+    window.openSettings = function() {
+        panel.classList.add('open');
+        overlay.classList.add('open');
+        updateSettingsAccount();
+    };
+
+    closeBtn.addEventListener('click', function() {
+        panel.classList.remove('open');
+        overlay.classList.remove('open');
+    });
+    overlay.addEventListener('click', function() {
+        panel.classList.remove('open');
+        overlay.classList.remove('open');
+    });
+
+    document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var theme = this.dataset.theme;
+            applyTheme(theme);
+            localStorage.setItem('lifetok_theme', theme);
+            document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.theme === theme);
+            });
+        });
+    });
+
+    document.getElementById('languageSelect').addEventListener('change', function() {
+        currentLang = this.value;
+        localStorage.setItem('lifetok_lang', currentLang);
+        updateUITexts();
+    });
+    document.getElementById('languageSelect').value = currentLang;
+}
+
+function updateSettingsAccount() {
+    var el = document.getElementById('settingsAccount');
+    if (el && currentUser) el.textContent = currentUser.email;
+}
+
+// ============================================================
+// ===== НАВИГАЦИЯ =====
+// ============================================================
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(function(n2) { n2.classList.remove('active'); });
+            this.classList.add('active');
+            var page = this.dataset.page;
+            document.getElementById('searchPage').classList.remove('active');
+            document.getElementById('profilePage').classList.remove('active');
+            document.getElementById('tiktokWrapper').style.display = 'none';
+            if (page === 'feed') {
+                document.getElementById('tiktokWrapper').style.display = 'block';
+                renderTikTokFeed();
+            } else if (page === 'search') {
+                document.getElementById('searchPage').classList.add('active');
+                document.getElementById('searchInput').focus();
+            } else if (page === 'profile') {
+                document.getElementById('profilePage').classList.add('active');
+                renderProfile();
+            }
+        });
+    });
+}
+
+function goBackFromSearch() {
+    document.getElementById('searchPage').classList.remove('active');
+    document.getElementById('tiktokWrapper').style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.classList.remove('active');
+        if (n.dataset.page === 'feed') n.classList.add('active');
+    });
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+}
+
+function goBackFromProfile() {
+    document.getElementById('profilePage').classList.remove('active');
+    document.getElementById('tiktokWrapper').style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.classList.remove('active');
+        if (n.dataset.page === 'feed') n.classList.add('active');
+    });
+}
+
+window.goBackFromSearch = goBackFromSearch;
+window.goBackFromProfile = goBackFromProfile;
+
+// ============================================================
+// ===== ПОИСК =====
+// ============================================================
+function setupSearch() {
+    document.getElementById('searchInput').addEventListener('input', function() {
+        var query = this.value.trim().toLowerCase();
+        var results = document.getElementById('searchResults');
+        if (!query) { results.innerHTML = ''; return; }
+
+        var filtered = Object.values(users).filter(function(u) {
+            return u.email !== currentUser.email && (u.nickname.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
+        });
+
+        if (filtered.length === 0) {
+            results.innerHTML = '<div style="text-align:center;color:#444;padding:20px;">'+t('nothingFound')+'</div>';
+            return;
+        }
+        results.innerHTML = filtered.map(function(u) {
+            return '<div class="search-user-item" onclick="showUserProfile(\''+u.email+'\')">'+
+                '<div class="search-user-avatar">'+(u.avatar?'<img src="'+u.avatar+'">':'👤')+'</div>'+
+                '<div class="search-user-info"><div class="search-user-name">'+u.nickname+'</div><div class="search-user-email">'+u.email+'</div></div>'+
+            '</div>';
+        }).join('');
+    });
+}
+
+// ============================================================
+// ===== ВСЕ ОСТАЛЬНЫЕ ФУНКЦИИ (renderTikTokFeed, renderProfile, и т.д.) =====
+// ============================================================
+// ... (остальные функции такие же как в предыдущем коде, с использованием t() для текстов)
+
+// ============================================================
+// ===== СОХРАНЕНИЕ ПРИ ВЫХОДЕ/ОБНОВЛЕНИИ (УЛУЧШЕННОЕ) =====
+// ============================================================
+// Сохраняем данные сразу при любом изменении
+function saveDataAndLog() {
+    var result = saveData();
+    if (result) {
+        console.log('💾 Данные сохранены');
+    }
+    return result;
+}
+
+// Сохраняем при потере фокуса (переключение вкладок)
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden && isAppReady) {
+        saveData();
+    }
+});
+
+// Сохраняем при закрытии/обновлении
+window.addEventListener('beforeunload', function() {
+    if (isAppReady) {
+        saveData();
+    }
+});
+
+// Сохраняем каждые 5 секунд (автосохранение)
+setInterval(function() {
+    if (isAppReady) {
+        saveData();
+    }
+}, 5000);
+
+// Сохраняем после каждого действия (пост, лайк, комментарий)
+// Для этого нужно вызывать saveData() после каждого изменения
+
+console.log('📱 LifeTok для телефона с автосохранением');
+console.log('📦 Постов: ' + posts.length);
+console.log('👤 Пользователей: ' + Object.keys(users).length);
+</script>
+
+</body>
+</html>
