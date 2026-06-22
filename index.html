@@ -1,1 +1,2223 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LifeTok</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; top: 0; left: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #000; color: #fff; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        body { height: 100vh; height: 100dvh; width: 100vw; width: 100dvw; }
+        
+        .splash-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 1000;
+        }
+        .splash-logo {
+            font-size: 4.5em;
+            font-weight: 900;
+            letter-spacing: 6px;
+            background: linear-gradient(135deg, #ff0033, #cc0033);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: pulse 2s ease infinite;
+        }
+        @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .splash-subtitle { color: #ff0033; font-size: 0.9em; letter-spacing: 8px; }
+        .splash-line {
+            width: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, #ff0033, transparent);
+            animation: lineExpand 1s ease-out 0.5s both;
+            border-radius: 2px;
+        }
+        @keyframes lineExpand { 0% { width: 0; } 100% { width: 200px; } }
+        .loading-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: #ff0033;
+            border-radius: 50%;
+            animation: dotBounce 1.4s infinite;
+        }
+        .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes dotBounce {
+            0%,80%,100% { transform: scale(0); opacity: 0.3; }
+            40% { transform: scale(1); opacity: 1; }
+        }
 
+        .auth-screen {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: linear-gradient(180deg, #1a0000 0%, #000 100%);
+            z-index: 999;
+        }
+        .auth-box { width: 100%; max-width: 350px; text-align: center; }
+        .auth-logo { font-size: 3.5em; font-weight: 900; letter-spacing: 4px; background: linear-gradient(135deg, #ff0033, #cc0033); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
+        .auth-subtitle { color: #666; font-size: 0.75em; letter-spacing: 6px; margin-bottom: 35px; }
+        .auth-input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; color: #fff; padding: 14px 16px; border-radius: 10px; font-size: 0.95em; margin-bottom: 12px; outline: none; }
+        .auth-input:focus { border-color: #ff0033; }
+        .auth-input::placeholder { color: #555; }
+        .auth-btn { width: 100%; background: #ff0033; color: #fff; border: none; padding: 14px; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; margin-top: 5px; }
+        .auth-btn:hover { opacity: 0.9; }
+        .auth-switch { color: #888; font-size: 0.85em; margin-top: 18px; }
+        .auth-switch span { color: #ff0033; cursor: pointer; font-weight: 600; }
+        .auth-error { color: #ff4757; font-size: 0.8em; display: none; margin-bottom: 10px; }
+        .auth-success { color: #00c853; font-size: 0.8em; display: none; margin-bottom: 10px; }
+        .remember-row { display: flex; align-items: center; gap: 8px; color: #888; font-size: 0.8em; margin-bottom: 12px; cursor: pointer; }
+        .remember-row input { accent-color: #ff0033; }
+        .saved-accounts { margin-top: 20px; padding-top: 20px; border-top: 1px solid #1a1a1a; text-align: left; }
+        .saved-title { color: #555; font-size: 0.7em; text-align: center; letter-spacing: 3px; margin-bottom: 12px; }
+        .saved-item { display: flex; align-items: center; padding: 12px; background: #1a1a1a; border-radius: 12px; margin-bottom: 8px; cursor: pointer; gap: 12px; border: 1px solid transparent; transition: all 0.2s; }
+        .saved-item:hover { background: #222; border-color: #ff0033; }
+        .saved-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #ff0033, #cc0033); display: flex; align-items: center; justify-content: center; font-size: 1.2em; overflow: hidden; flex-shrink: 0; }
+        .saved-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .saved-name { font-weight: 600; font-size: 0.9em; color: #fff; }
+        .saved-email { font-size: 0.7em; color: #888; }
+        .saved-remove { background: none; border: none; color: #555; cursor: pointer; font-size: 0.9em; padding: 4px 8px; border-radius: 6px; }
+        .saved-remove:hover { color: #ff0033; background: rgba(255,0,51,0.1); }
+
+        .main-screen {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #000;
+            z-index: 100;
+        }
+        .main-screen.active { display: block; }
+        .tiktok-container { width: 100%; height: 100%; overflow: hidden; background: #000; }
+        .tiktok-wrapper {
+            width: 100%;
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tiktok-wrapper::-webkit-scrollbar { display: none; }
+        .tiktok-item {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh;
+            scroll-snap-align: start;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+            overflow: hidden;
+            position: relative;
+        }
+        .tiktok-item .media-wrap {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .tiktok-item .media-wrap img,
+        .tiktok-item .media-wrap video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .carousel-container {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            background: #000;
+        }
+        .carousel-track {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.4s ease;
+        }
+        .carousel-slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #000;
+        }
+        .carousel-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .carousel-dots {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 8px;
+            z-index: 10;
+            background: rgba(0,0,0,0.5);
+            padding: 5px 12px;
+            border-radius: 20px;
+        }
+        .carousel-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            transition: all 0.3s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .carousel-dot.active { background: #ff0033; transform: scale(1.3); }
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.4);
+            color: #fff;
+            border: none;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .carousel-arrow:active { background: rgba(255,255,255,0.3); }
+        .carousel-arrow.left { left: 10px; }
+        .carousel-arrow.right { right: 10px; }
+
+        .tiktok-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0 15px 100px;
+            background: linear-gradient(transparent, rgba(0,0,0,0.8) 70%);
+            pointer-events: none;
+        }
+        .tiktok-overlay .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 12px 6px 6px;
+            border-radius: 30px;
+            max-width: 95%;
+            backdrop-filter: blur(4px);
+        }
+        .tiktok-overlay .user-avatar {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0033, #cc0033);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1em;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.3);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .tiktok-overlay .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .tiktok-overlay .user-name {
+            font-weight: 700;
+            font-size: 0.9em;
+            color: #fff;
+            cursor: pointer;
+        }
+        .tiktok-overlay .user-name span {
+            color: rgba(255,255,255,0.6);
+            font-weight: 400;
+            font-size: 0.7em;
+            margin-left: 6px;
+        }
+        .tiktok-overlay .post-caption {
+            font-size: 0.85em;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 6px 12px;
+            border-radius: 10px;
+            display: inline-block;
+            max-width: 90%;
+            backdrop-filter: blur(4px);
+            margin-top: 4px;
+        }
+
+        .tiktok-profile-right {
+            position: absolute;
+            right: 12px;
+            bottom: 330px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .tiktok-profile-right .avatar {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            border: 2px solid #ff0033;
+            overflow: hidden;
+            cursor: pointer;
+            pointer-events: auto;
+            background: #1a1a1a;
+        }
+        .tiktok-profile-right .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .tiktok-profile-right .subscribe-btn {
+            pointer-events: auto;
+            background: #ff0033;
+            color: #fff;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.6em;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tiktok-profile-right .subscribe-btn.subscribed {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tiktok-actions {
+            position: absolute;
+            right: 12px;
+            bottom: 160px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 18px;
+            z-index: 20;
+            pointer-events: none;
+        }
+        .tiktok-actions button {
+            pointer-events: auto;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.8em;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+            transition: transform 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .tiktok-actions button:active { transform: scale(0.8); }
+        .tiktok-actions button .count { font-size: 0.35em; font-weight: 600; }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.9);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            z-index: 200;
+            padding: 6px 0 12px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            cursor: pointer;
+            color: #666;
+            font-size: 0.6em;
+            padding: 5px;
+            transition: color 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .nav-item.active { color: #ff0033; }
+        .nav-icon { font-size: 1.6em; display: block; margin-bottom: 2px; }
+
+        .create-btn {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: #ff0033;
+            color: #fff;
+            border: none;
+            font-size: 2em;
+            cursor: pointer;
+            z-index: 90;
+            box-shadow: 0 4px 20px rgba(255,0,51,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .create-btn:active { transform: translateX(-50%) scale(0.9); }
+        .create-menu {
+            position: fixed;
+            bottom: 145px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a1a1a;
+            border-radius: 14px;
+            padding: 12px 20px;
+            z-index: 150;
+            display: flex;
+            gap: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+        }
+        .create-menu button {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1em;
+            padding: 8px 14px;
+            border-radius: 10px;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        .create-menu button:active { background: #ff0033; }
+        .hidden { display: none !important; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 300;
+            display: flex;
+            flex-direction: column;
+            animation: modalIn 0.3s ease;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid #1a1a1a;
+            flex-shrink: 0;
+            background: #000;
+            min-height: 56px;
+        }
+        .modal-header .modal-title { font-weight: 600; font-size: 1em; }
+        .modal-header button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .modal-body { flex: 1; overflow-y: auto; padding: 15px; }
+        .modal-comment {
+            padding: 10px 0;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .modal-comment .comment-user { font-weight: 600; font-size: 0.85em; color: #fff; }
+        .modal-comment .comment-text { font-size: 0.9em; color: #ddd; margin-top: 3px; }
+        .modal-comment .comment-date { font-size: 0.65em; color: #666; }
+        .comment-delete-btn {
+            background: none; border: none; color: #ff0033;
+            cursor: pointer; font-size: 0.8em; float: right;
+        }
+        .modal-comment-input {
+            display: flex;
+            gap: 10px;
+            padding: 12px 15px;
+            border-top: 1px solid #1a1a1a;
+            flex-shrink: 0;
+            background: #000;
+        }
+        .modal-comment-input input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 0.9em;
+            outline: none;
+        }
+        .modal-comment-input input:focus { border-color: #ff0033; }
+        .modal-comment-input button {
+            background: #ff0033;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .post-modal .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+            gap: 6px;
+            max-width: 90%;
+            margin: 10px auto;
+            width: 100%;
+        }
+        .post-modal .preview-grid .preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0a0a0a;
+        }
+        .post-modal .preview-grid .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .post-modal .preview-grid .preview-item .remove-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: rgba(255,0,51,0.9);
+            border: none;
+            color: #fff;
+            width: 22px; height: 22px;
+            border-radius: 50%;
+            font-size: 0.7em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .post-modal .preview-container {
+            width: 100%;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #000;
+        }
+        .post-modal .preview-container img,
+        .post-modal .preview-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .post-modal .caption-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-top: 1px solid #333;
+            background: #1a1a1a;
+            color: #fff;
+            font-size: 1em;
+            outline: none;
+            resize: none;
+            font-family: inherit;
+            min-height: 48px;
+        }
+        .post-modal .caption-input:focus { border-color: #ff0033; }
+        .post-modal .btn-row {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            flex-shrink: 0;
+            background: #000;
+            border-top: 1px solid #1a1a1a;
+            justify-content: center;
+        }
+        .post-modal .btn-row button {
+            padding: 10px 24px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.95em;
+            min-width: 100px;
+        }
+        .post-modal .btn-row .publish-btn { background: #ff0033; color: #fff; }
+        .post-modal .btn-row .cancel-btn { background: #2a2a2a; color: #fff; }
+        .post-modal .add-btn {
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid #333;
+            padding: 8px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin: 5px auto;
+        }
+        .post-modal .add-btn:active { background: #2a2a2a; }
+
+        .search-page {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #000;
+            z-index: 150;
+        }
+        .search-page.active { display: block; }
+        .search-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: #000;
+            border-bottom: 1px solid #1a1a1a;
+            gap: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .search-back-btn {
+            background: none; border: none; color: #fff;
+            font-size: 1.1em; cursor: pointer; padding: 6px 10px;
+            border-radius: 8px;
+        }
+        .search-back-btn:active { background: rgba(255,255,255,0.1); }
+        .search-title { color: #fff; font-weight: 700; font-size: 0.9em; }
+        .search-header input {
+            flex: 1;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 0.9em;
+            outline: none;
+        }
+        .search-header input:focus { border-color: #ff0033; }
+        .search-results { padding: 15px; overflow-y: auto; height: calc(100% - 60px); }
+        .search-user-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 10px;
+            gap: 12px;
+            border-bottom: 1px solid #111;
+            cursor: pointer;
+        }
+        .search-user-avatar {
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0033, #cc0033);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .search-user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .search-user-name { font-weight: 600; font-size: 0.9em; color: #fff; }
+        .search-user-email { font-size: 0.7em; color: #888; }
+
+        .profile-page {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #000;
+            z-index: 150;
+            overflow-y: auto;
+        }
+        .profile-page.active { display: block; }
+        .profile-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: #000;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 1px solid #1a1a1a;
+        }
+        .profile-back-btn {
+            background: none; border: none; color: #fff;
+            font-size: 1em; cursor: pointer; padding: 6px 10px;
+            border-radius: 8px;
+        }
+        .profile-back-btn:active { background: rgba(255,255,255,0.1); }
+        .profile-title { font-weight: 700; font-size: 0.9em; color: #fff; }
+        .profile-settings-btn {
+            background: none; border: none; color: #fff;
+            font-size: 1.3em; cursor: pointer; padding: 4px 8px;
+            border-radius: 8px;
+        }
+        .profile-settings-btn:active { background: rgba(255,255,255,0.1); }
+        .profile-header {
+            text-align: center;
+            padding: 20px 20px 15px;
+        }
+        .profile-avatar {
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff0033, #cc0033);
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            border: 3px solid #ff0033;
+            overflow: hidden;
+            cursor: pointer;
+        }
+        .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-name { font-size: 1.2em; font-weight: 700; color: #fff; }
+        .profile-email { color: #888; font-size: 0.8em; }
+        .profile-bio {
+            color: #aaa; font-size: 0.85em; margin: 5px 20px 10px;
+            cursor: pointer; padding: 5px 10px; border-radius: 8px;
+        }
+        .profile-bio:active { background: rgba(255,255,255,0.05); }
+        .profile-bio-edit {
+            background: transparent; border: 1px solid #333;
+            color: #fff; padding: 8px 12px; border-radius: 8px;
+            width: 80%; margin: 5px auto; display: none; font-size: 0.85em;
+        }
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 15px 0;
+        }
+        .profile-stat { text-align: center; cursor: pointer; }
+        .profile-stat-num { font-size: 1.2em; font-weight: 700; color: #fff; }
+        .profile-stat-label { font-size: 0.65em; color: #888; }
+        .profile-logout-btn {
+            background: #1a1a1a; color: #fff; border: 1px solid #333;
+            padding: 8px 24px; border-radius: 8px; font-size: 0.85em;
+            cursor: pointer; margin-top: 5px;
+        }
+        .profile-logout-btn:active { background: #2a2a2a; }
+        .profile-tabs {
+            display: flex;
+            border-bottom: 1px solid #1a1a1a;
+            margin: 0 15px;
+        }
+        .profile-tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 0.8em;
+            color: #888;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        .profile-tab.active { color: #ff0033; border-bottom-color: #ff0033; }
+        .profile-posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding: 2px;
+            padding-bottom: 80px;
+        }
+        .profile-post-thumb {
+            aspect-ratio: 1;
+            overflow: hidden;
+            position: relative;
+            cursor: pointer;
+            background: #0a0a0a;
+        }
+        .profile-post-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-post-thumb .badge {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255,0,51,0.8);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 0.6em;
+            color: #fff;
+        }
+        .profile-post-thumb .like-badge {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            font-size: 0.65em;
+            background: rgba(0,0,0,0.6);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ff0033;
+        }
+        .profile-post-thumb .delete-post-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            background: rgba(255,0,51,0.9);
+            border: none;
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            font-size: 0.7em;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 5;
+        }
+        .profile-post-thumb:active .delete-post-btn { opacity: 1; }
+
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 320px;
+            max-width: 85%;
+            height: 100%;
+            background: #1a1a1a;
+            z-index: 500;
+            transition: right 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: -4px 0 30px rgba(0,0,0,0.5);
+        }
+        .settings-panel.open { right: 0; }
+        .settings-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 499;
+            display: none;
+        }
+        .settings-overlay.open { display: block; }
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #2a2a2a;
+            margin-bottom: 20px;
+        }
+        .settings-title { font-size: 1.3em; font-weight: 700; color: #fff; }
+        .settings-close {
+            background: none; border: none; color: #fff;
+            font-size: 1.5em; cursor: pointer; padding: 4px 8px;
+        }
+        .settings-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid #2a2a2a;
+            color: #fff;
+        }
+        .settings-item .label { font-size: 0.95em; }
+        .settings-item .value { color: #888; font-size: 0.85em; }
+        .settings-item .toggle-btn {
+            background: #2a2a2a;
+            border: none;
+            color: #fff;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .settings-item .toggle-btn:active { opacity: 0.7; }
+        .settings-item .toggle-btn.active { background: #ff0033; color: #fff; }
+        .settings-item .toggle-btn .check-mark { display: none; margin-left: 4px; }
+        .settings-item .toggle-btn.active .check-mark { display: inline; }
+        .settings-item select {
+            background: #2a2a2a;
+            border: 1px solid #3a3a3a;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            cursor: pointer;
+            outline: none;
+        }
+        .settings-item select:focus { border-color: #ff0033; }
+        .theme-btns {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+        .theme-btns .toggle-btn {
+            font-size: 0.8em;
+            padding: 8px 14px;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        body.light-theme {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+        body.light-theme .tiktok-item { background: #f5f5f5; }
+        body.light-theme .bottom-nav { background: rgba(255,255,255,0.95); border-top: 1px solid #e0e0e0; }
+        body.light-theme .nav-item { color: #999; }
+        body.light-theme .nav-item.active { color: #ff0033; }
+        body.light-theme .settings-panel { background: #fff; }
+        body.light-theme .settings-title { color: #1a1a1a; }
+        body.light-theme .settings-close { color: #1a1a1a; }
+        body.light-theme .settings-item { color: #1a1a1a; border-bottom: 1px solid #e8e8e8; }
+        body.light-theme .settings-item .value { color: #888; }
+        body.light-theme .settings-item .toggle-btn { background: #e8e8e8; color: #1a1a1a; }
+        body.light-theme .settings-item .toggle-btn.active { background: #ff0033; color: #fff; }
+        body.light-theme .settings-item select { background: #f0f0f0; border: 1px solid #ddd; color: #1a1a1a; }
+        body.light-theme .settings-header { border-bottom: 1px solid #e8e8e8; }
+        body.light-theme .settings-overlay { background: rgba(0,0,0,0.3); }
+        body.light-theme .auth-screen { background: #f5f5f5; }
+        body.light-theme .auth-input { background: #fff; border: 1px solid #ddd; color: #1a1a1a; }
+        body.light-theme .auth-input::placeholder { color: #999; }
+        body.light-theme .saved-item { background: #fff; border: 1px solid #e0e0e0; }
+        body.light-theme .saved-item:hover { background: #f0f0f0; border-color: #ff0033; }
+        body.light-theme .saved-name { color: #1a1a1a; }
+        body.light-theme .search-page { background: #f5f5f5; }
+        body.light-theme .search-header { background: #f5f5f5; border-bottom: 1px solid #e0e0e0; }
+        body.light-theme .search-header input { background: #fff; border: 1px solid #ddd; color: #1a1a1a; }
+        body.light-theme .search-user-name { color: #1a1a1a; }
+        body.light-theme .search-user-item { border-bottom: 1px solid #e0e0e0; }
+        body.light-theme .profile-page { background: #f5f5f5; }
+        body.light-theme .profile-name { color: #1a1a1a; }
+        body.light-theme .profile-stat-num { color: #1a1a1a; }
+        body.light-theme .profile-logout-btn { background: #fff; border: 1px solid #ddd; color: #1a1a1a; }
+        body.light-theme .profile-logout-btn:active { background: #f0f0f0; }
+        body.light-theme .profile-back-btn { color: #1a1a1a; }
+        body.light-theme .profile-back-btn:active { background: rgba(0,0,0,0.05); }
+        body.light-theme .profile-settings-btn { color: #1a1a1a; }
+        body.light-theme .profile-settings-btn:active { background: rgba(0,0,0,0.05); }
+        body.light-theme .profile-header-top { background: #f5f5f5; border-bottom: 1px solid #e0e0e0; }
+        body.light-theme .profile-post-thumb { background: #e8e8e8; }
+        body.light-theme .create-menu { background: #fff; }
+        body.light-theme .create-menu button { color: #1a1a1a; }
+        body.light-theme .modal-header { background: #f5f5f5; border-bottom: 1px solid #e0e0e0; }
+        body.light-theme .modal-header button { color: #1a1a1a; }
+        body.light-theme .modal-comment-input { background: #f5f5f5; border-top: 1px solid #e0e0e0; }
+        body.light-theme .modal-comment-input input { background: #fff; border: 1px solid #ddd; color: #1a1a1a; }
+        body.light-theme .modal-comment .comment-user { color: #1a1a1a; }
+        body.light-theme .modal-comment .comment-text { color: #333; }
+        body.light-theme .splash-screen { background: #f5f5f5; }
+        body.light-theme .tiktok-overlay .user-name { color: #fff; }
+        body.light-theme .tiktok-overlay .post-caption { color: #fff; }
+        body.light-theme .tiktok-actions button { color: #fff; }
+
+        body.green-theme .bottom-nav .nav-item.active { color: #00c853; }
+        body.green-theme .tiktok-profile-right .subscribe-btn { background: #00c853; }
+        body.green-theme .create-btn { background: #00c853; box-shadow: 0 4px 20px rgba(0,200,83,0.4); }
+        body.green-theme .settings-item .toggle-btn.active { background: #00c853; }
+        body.green-theme .auth-btn { background: #00c853; }
+        body.green-theme .profile-avatar { border-color: #00c853; }
+        body.green-theme .profile-tab.active { color: #00c853; border-bottom-color: #00c853; }
+        body.green-theme .modal-comment-input button { background: #00c853; }
+        body.green-theme .carousel-dot.active { background: #00c853; }
+
+        body.pink-theme .bottom-nav .nav-item.active { color: #ff4081; }
+        body.pink-theme .tiktok-profile-right .subscribe-btn { background: #ff4081; }
+        body.pink-theme .create-btn { background: #ff4081; box-shadow: 0 4px 20px rgba(255,64,129,0.4); }
+        body.pink-theme .settings-item .toggle-btn.active { background: #ff4081; }
+        body.pink-theme .auth-btn { background: #ff4081; }
+        body.pink-theme .profile-avatar { border-color: #ff4081; }
+        body.pink-theme .profile-tab.active { color: #ff4081; border-bottom-color: #ff4081; }
+        body.pink-theme .modal-comment-input button { background: #ff4081; }
+        body.pink-theme .carousel-dot.active { background: #ff4081; }
+
+        @media (max-width: 480px) {
+            .post-modal .btn-row button { padding: 8px 16px; font-size: 0.9em; min-width: 70px; }
+            .modal-header { padding: 10px 14px; min-height: 48px; }
+            .tiktok-profile-right .avatar { width: 40px; height: 40px; }
+            .tiktok-actions { bottom: 140px; gap: 14px; }
+            .tiktok-actions button { font-size: 1.5em; }
+            .carousel-arrow { width: 32px; height: 32px; font-size: 1.2em; }
+            .carousel-dots { bottom: 70px; padding: 4px 10px; }
+            .carousel-dot { width: 6px; height: 6px; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ЗАСТАВКА -->
+<div class="splash-screen" id="splashScreen">
+    <div class="splash-logo">LIFETOK</div>
+    <div class="splash-subtitle">MOMENTS</div>
+    <div class="splash-line"></div>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+        <span class="loading-dot"></span>
+    </div>
+</div>
+
+<!-- АВТОРИЗАЦИЯ -->
+<div class="auth-screen" id="authScreen">
+    <div class="auth-box">
+        <div class="auth-logo">LIFETOK</div>
+        <div class="auth-subtitle">MOMENTS</div>
+        <div class="auth-error" id="authError"></div>
+        <div class="auth-success" id="authSuccess"></div>
+        <input type="email" class="auth-input" id="authEmail" placeholder="Почта">
+        <input type="text" class="auth-input" id="authNickname" placeholder="Никнейм">
+        <input type="password" class="auth-input" id="authPassword" placeholder="Пароль">
+        <label class="remember-row"><input type="checkbox" id="rememberMe" checked> Запомнить меня</label>
+        <button class="auth-btn" id="authBtn">Войти</button>
+        <div class="auth-switch"><span id="authSwitch">Создать аккаунт</span></div>
+        <div class="saved-accounts" id="savedAccounts" style="display:none;">
+            <div class="saved-title">Быстрый вход</div>
+            <div id="savedAccountsList"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ОСНОВНОЙ ЭКРАН -->
+<div class="main-screen" id="mainScreen">
+    <div class="tiktok-container">
+        <div class="tiktok-wrapper" id="tiktokWrapper">
+            <div id="tiktokFeed"></div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" data-page="feed"><span class="nav-icon">🏠</span><span class="nav-label">Лента</span></div>
+        <div class="nav-item" data-page="search"><span class="nav-icon">🔍</span><span class="nav-label">Поиск</span></div>
+        <div class="nav-item" data-page="profile"><span class="nav-icon">👤</span><span class="nav-label">Профиль</span></div>
+    </div>
+
+    <button class="create-btn" id="createBtn">+</button>
+    <div class="create-menu hidden" id="createMenu">
+        <button id="createPhotoBtn">📷 <span class="menu-label">Фото</span></button>
+        <button id="createVideoBtn">🎬 <span class="menu-label">Видео</span></button>
+    </div>
+</div>
+
+<!-- СТРАНИЦА ПОИСКА -->
+<div class="search-page" id="searchPage">
+    <div class="search-header">
+        <button class="search-back-btn" onclick="goBackFromSearch()">← <span class="back-label">Назад</span></button>
+        <span class="search-title">Поиск</span>
+        <input type="text" id="searchInput" placeholder="Найти людей...">
+    </div>
+    <div class="search-results" id="searchResults"></div>
+</div>
+
+<!-- СТРАНИЦА ПРОФИЛЯ -->
+<div class="profile-page" id="profilePage">
+    <div id="profileContent"></div>
+</div>
+
+<!-- НАСТРОЙКИ -->
+<div class="settings-overlay" id="settingsOverlay"></div>
+<div class="settings-panel" id="settingsPanel">
+    <div class="settings-header">
+        <div class="settings-title">Настройки</div>
+        <button class="settings-close" id="settingsClose">✕</button>
+    </div>
+    <div class="settings-item" style="flex-direction:column;align-items:stretch;gap:8px;">
+        <span class="label">Тема</span>
+        <div class="theme-btns">
+            <button class="toggle-btn active" data-theme="dark"><span>🌙 Тёмная</span><span class="check-mark">✓</span></button>
+            <button class="toggle-btn" data-theme="light"><span>☀️ Светлая</span><span class="check-mark">✓</span></button>
+            <button class="toggle-btn" data-theme="green"><span>🌿 Зелёная</span><span class="check-mark">✓</span></button>
+            <button class="toggle-btn" data-theme="pink"><span>🌸 Розовая</span><span class="check-mark">✓</span></button>
+        </div>
+    </div>
+    <div class="settings-item">
+        <span class="label">Язык / Language</span>
+        <select id="languageSelect">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+        </select>
+    </div>
+    <div class="settings-item">
+        <span class="label">Версия</span>
+        <span class="value">1.0.0</span>
+    </div>
+    <div class="settings-item" style="border-bottom:none;">
+        <span class="label">Аккаунт</span>
+        <span class="value" id="settingsAccount">user@example.com</span>
+    </div>
+</div>
+
+<!-- СКРЫТЫЙ INPUT ДЛЯ ФАЙЛОВ -->
+<input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+
+<script>
+// ============================================================
+// ===== ПЕРЕВОДЫ =====
+// ============================================================
+var translations = {
+    ru: {
+        login: 'Войти', register: 'Зарегистрироваться', email: 'Почта',
+        nickname: 'Никнейм', password: 'Пароль', remember: 'Запомнить меня',
+        createAccount: 'Создать аккаунт', feed: 'Лента', search: 'Поиск',
+        profile: 'Профиль', settings: 'Настройки', theme: 'Тема',
+        dark: 'Тёмная', light: 'Светлая', green: 'Зелёная', pink: 'Розовая',
+        language: 'Язык', version: 'Версия', account: 'Аккаунт',
+        comments: 'Комментарии', write: 'Написать...', noComments: 'Нет комментариев',
+        noPosts: 'Нет постов', logout: 'Выйти', subscribe: 'Подписаться',
+        subscribed: 'Подписан', searchPlaceholder: 'Найти людей...',
+        nothingFound: 'Ничего не найдено', back: 'Назад', posts: 'Постов',
+        followers: 'Подписчиков', following: 'Подписок', delete: 'Удалить?',
+        liked: 'Понравилось', caption: 'Описание', enterCaption: 'Введите описание...',
+        reply: 'Ответить', likes: '❤️', editBio: 'Изменить описание',
+        bioPlaceholder: 'Расскажите о себе...', addCaption: 'Добавить описание',
+        publish: 'Опубликовать', cancel: 'Отмена', choosePhoto: 'Фото',
+        chooseVideo: 'Видео', addPhoto: '➕ Добавить фото', confirmLogout: 'Выйти?',
+        addCaptionTitle: 'Добавить описание', beFirst: 'Будьте первым!'
+    },
+    en: {
+        login: 'Login', register: 'Sign Up', email: 'Email',
+        nickname: 'Username', password: 'Password', remember: 'Remember me',
+        createAccount: 'Create Account', feed: 'Feed', search: 'Search',
+        profile: 'Profile', settings: 'Settings', theme: 'Theme',
+        dark: 'Dark', light: 'Light', green: 'Green', pink: 'Pink',
+        language: 'Language', version: 'Version', account: 'Account',
+        comments: 'Comments', write: 'Write...', noComments: 'No comments',
+        noPosts: 'No posts', logout: 'Logout', subscribe: 'Subscribe',
+        subscribed: 'Subscribed', searchPlaceholder: 'Search people...',
+        nothingFound: 'Nothing found', back: 'Back', posts: 'Posts',
+        followers: 'Followers', following: 'Following', delete: 'Delete?',
+        liked: 'Liked', caption: 'Caption', enterCaption: 'Enter caption...',
+        reply: 'Reply', likes: '❤️', editBio: 'Edit bio',
+        bioPlaceholder: 'Tell about yourself...', addCaption: 'Add caption',
+        publish: 'Publish', cancel: 'Cancel', choosePhoto: 'Photo',
+        chooseVideo: 'Video', addPhoto: '➕ Add photo', confirmLogout: 'Logout?',
+        addCaptionTitle: 'Add caption', beFirst: 'Be the first!'
+    }
+};
+
+var currentLang = localStorage.getItem('lifetok_lang') || 'ru';
+
+function t(key) {
+    return translations[currentLang] && translations[currentLang][key] ? translations[currentLang][key] : key;
+}
+
+// ============================================================
+// ===== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ =====
+// ============================================================
+var currentUser = null;
+var posts = [];
+var users = {};
+var imageStorage = {};
+var carouselState = {};
+var isAppReady = false;
+
+// ============================================================
+// ===== ЗАГРУЗКА/СОХРАНЕНИЕ =====
+// ============================================================
+function loadData() {
+    try {
+        var saved = localStorage.getItem('lifetok_data');
+        if (saved) {
+            var data = JSON.parse(saved);
+            users = data.users || {};
+            posts = data.posts || [];
+            imageStorage = data.imageStorage || {};
+            console.log('📦 Данные загружены: постов ' + posts.length);
+            return true;
+        }
+    } catch(e) {
+        console.warn('Ошибка загрузки:', e);
+    }
+    users = {};
+    posts = [];
+    imageStorage = {};
+    return false;
+}
+
+function saveData() {
+    try {
+        var data = {
+            users: users,
+            posts: posts,
+            imageStorage: imageStorage
+        };
+        localStorage.setItem('lifetok_data', JSON.stringify(data));
+        return true;
+    } catch(e) {
+        console.warn('Ошибка сохранения:', e);
+        return false;
+    }
+}
+
+// ============================================================
+// ===== АВТОРИЗАЦИЯ =====
+// ============================================================
+var savedAccounts = JSON.parse(localStorage.getItem('lifetok_saved') || '[]');
+
+function renderSavedAccounts() {
+    var c = document.getElementById('savedAccounts');
+    var l = document.getElementById('savedAccountsList');
+    if (!savedAccounts.length) { c.style.display = 'none'; return; }
+    c.style.display = 'block';
+    l.innerHTML = savedAccounts.map(function(a) {
+        return '<div class="saved-item" data-email="'+a.email+'">'+
+            '<div class="saved-avatar">'+(a.avatar?'<img src="'+a.avatar+'">':'👤')+'</div>'+
+            '<div class="saved-info"><div class="saved-name">'+a.nickname+'</div><div class="saved-email">'+a.email+'</div></div>'+
+            '<button class="saved-remove" data-remove="'+a.email+'">✕</button>'+
+        '</div>';
+    }).join('');
+    l.querySelectorAll('.saved-item').forEach(function(i) {
+        i.addEventListener('click', function(e) {
+            if (e.target.classList.contains('saved-remove')) return;
+            document.getElementById('authEmail').value = this.dataset.email;
+            document.getElementById('authPassword').focus();
+        });
+    });
+    l.querySelectorAll('.saved-remove').forEach(function(b) {
+        b.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (confirm('Удалить?')) {
+                savedAccounts = savedAccounts.filter(function(a) { return a.email !== b.dataset.remove; });
+                localStorage.setItem('lifetok_saved', JSON.stringify(savedAccounts));
+                renderSavedAccounts();
+            }
+        });
+    });
+}
+
+function saveCurrentAccount(email, nickname, avatar) {
+    var ex = savedAccounts.find(function(a) { return a.email === email; });
+    if (!ex) savedAccounts.push({ email: email, nickname: nickname, avatar: avatar });
+    else { ex.nickname = nickname; ex.avatar = avatar; }
+    localStorage.setItem('lifetok_saved', JSON.stringify(savedAccounts));
+    localStorage.setItem('lifetok_user', JSON.stringify({ email: email, timestamp: Date.now() }));
+}
+
+function tryAutoLogin() {
+    try {
+        var s = JSON.parse(localStorage.getItem('lifetok_user') || 'null');
+        if (s && s.email && users[s.email]) return s.email;
+    } catch(e) {}
+    return null;
+}
+
+// ============================================================
+// ===== ЗАПУСК =====
+// ============================================================
+loadData();
+
+var splash = document.getElementById('splashScreen');
+
+setTimeout(function() {
+    splash.style.display = 'none';
+    
+    var savedUser = tryAutoLogin();
+    if (savedUser && users[savedUser]) {
+        currentUser = users[savedUser];
+        document.getElementById('authEmail').value = savedUser;
+        document.getElementById('authPassword').value = currentUser.password || '123456';
+        document.getElementById('authBtn').click();
+    } else {
+        document.getElementById('authScreen').style.display = 'flex';
+        renderSavedAccounts();
+        updateAuthTexts();
+    }
+}, 1500);
+
+// ============================================================
+// ===== ОБНОВЛЕНИЕ ТЕКСТОВ =====
+// ============================================================
+function updateAuthTexts() {
+    var btn = document.getElementById('authBtn');
+    var isLogin = btn.textContent === 'Войти' || btn.textContent === 'Login' || btn.textContent === '登录';
+    btn.textContent = isLogin ? t('login') : t('register');
+    document.getElementById('authEmail').placeholder = t('email');
+    document.getElementById('authNickname').placeholder = t('nickname');
+    document.getElementById('authPassword').placeholder = t('password');
+    var rememberLabel = document.querySelector('.remember-row');
+    if (rememberLabel) {
+        rememberLabel.innerHTML = '<input type="checkbox" id="rememberMe" checked> ' + t('remember');
+    }
+    var switchSpan = document.querySelector('.auth-switch span');
+    if (switchSpan) switchSpan.textContent = t('createAccount');
+}
+
+function updateUITexts() {
+    document.querySelectorAll('.nav-item').forEach(function(item) {
+        var page = item.dataset.page;
+        var labels = { feed: t('feed'), search: t('search'), profile: t('profile') };
+        var label = item.querySelector('.nav-label');
+        if (label) label.textContent = labels[page];
+    });
+    
+    var photoLabel = document.querySelector('#createPhotoBtn .menu-label');
+    var videoLabel = document.querySelector('#createVideoBtn .menu-label');
+    if (photoLabel) photoLabel.textContent = t('choosePhoto');
+    if (videoLabel) videoLabel.textContent = t('chooseVideo');
+    
+    var searchInput = document.getElementById('searchInput');
+    if (searchInput) searchInput.placeholder = t('searchPlaceholder');
+    var searchTitle = document.querySelector('.search-title');
+    if (searchTitle) searchTitle.textContent = t('search');
+    var backLabel = document.querySelector('.search-back-btn .back-label');
+    if (backLabel) backLabel.textContent = t('back');
+    
+    var settingsTitle = document.querySelector('.settings-title');
+    if (settingsTitle) settingsTitle.textContent = t('settings');
+    document.querySelectorAll('.settings-item .label').forEach(function(label) {
+        var text = label.textContent.trim();
+        if (text === 'Тема' || text === 'Theme' || text === '主题') label.textContent = t('theme');
+        else if (text === 'Язык / Language') label.textContent = t('language');
+        else if (text === 'Версия' || text === 'Version' || text === '版本') label.textContent = t('version');
+        else if (text === 'Аккаунт' || text === 'Account' || text === '账户') label.textContent = t('account');
+    });
+    document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(btn) {
+        var theme = btn.dataset.theme;
+        var labels = { dark: '🌙 ' + t('dark'), light: '☀️ ' + t('light'), green: '🌿 ' + t('green'), pink: '🌸 ' + t('pink') };
+        var span = btn.querySelector('span:first-child');
+        if (span) span.textContent = labels[theme] || theme;
+    });
+    
+    updateAuthTexts();
+    if (currentUser) {
+        renderProfile();
+        renderTikTokFeed();
+    }
+}
+
+// ============================================================
+// ===== ОБРАБОТЧИКИ АВТОРИЗАЦИИ =====
+// ============================================================
+document.getElementById('authSwitch').addEventListener('click', function() {
+    var btn = document.getElementById('authBtn');
+    var isLogin = btn.textContent === 'Войти' || btn.textContent === 'Login' || btn.textContent === '登录';
+    btn.textContent = isLogin ? t('register') : t('login');
+    document.getElementById('authError').style.display = 'none';
+    document.getElementById('authSuccess').style.display = 'none';
+    document.getElementById('authNickname').style.display = isLogin ? 'block' : 'block';
+});
+
+document.getElementById('authBtn').addEventListener('click', function() {
+    var email = document.getElementById('authEmail').value.trim();
+    var nickname = document.getElementById('authNickname').value.trim();
+    var password = document.getElementById('authPassword').value.trim();
+    var err = document.getElementById('authError');
+    var suc = document.getElementById('authSuccess');
+    err.style.display = 'none';
+    suc.style.display = 'none';
+
+    if (!email || !password) {
+        err.textContent = 'Заполните почту и пароль / Fill in email and password';
+        err.style.display = 'block';
+        return;
+    }
+
+    var isLogin = document.getElementById('authBtn').textContent === t('login');
+
+    if (isLogin) {
+        if (!users[email] || users[email].password !== password) {
+            err.textContent = 'Неверный email или пароль / Invalid email or password';
+            err.style.display = 'block';
+            return;
+        }
+        currentUser = users[email];
+        saveCurrentAccount(email, currentUser.nickname, currentUser.avatar);
+        suc.textContent = 'Вход выполнен! / Logged in!';
+        suc.style.display = 'block';
+        setTimeout(function() {
+            enterApp();
+        }, 400);
+    } else {
+        if (!nickname) {
+            err.textContent = 'Введите никнейм / Enter username';
+            err.style.display = 'block';
+            return;
+        }
+        if (users[email]) {
+            err.textContent = 'Email уже используется / Email already used';
+            err.style.display = 'block';
+            return;
+        }
+        users[email] = {
+            email: email,
+            nickname: nickname,
+            password: password,
+            avatar: null,
+            bio: '',
+            following: []
+        };
+        currentUser = users[email];
+        saveCurrentAccount(email, nickname, null);
+        saveData();
+        suc.textContent = 'Аккаунт создан! / Account created!';
+        suc.style.display = 'block';
+        setTimeout(function() {
+            enterApp();
+        }, 400);
+    }
+});
+
+// ============================================================
+// ===== ВХОД В ПРИЛОЖЕНИЕ =====
+// ============================================================
+function enterApp() {
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('mainScreen').classList.add('active');
+    isAppReady = true;
+    
+    setupNavigation();
+    setupSearch();
+    setupCreateButtons();
+    setupSettings();
+    updateUITexts();
+    updateSettingsAccount();
+    renderTikTokFeed();
+    renderProfile();
+    
+    console.log('✅ Приложение запущено');
+}
+
+// ============================================================
+// ===== НАСТРОЙКИ =====
+// ============================================================
+function setupSettings() {
+    var panel = document.getElementById('settingsPanel');
+    var overlay = document.getElementById('settingsOverlay');
+    var closeBtn = document.getElementById('settingsClose');
+
+    window.openSettings = function() {
+        panel.classList.add('open');
+        overlay.classList.add('open');
+        updateSettingsAccount();
+    };
+
+    closeBtn.addEventListener('click', function() {
+        panel.classList.remove('open');
+        overlay.classList.remove('open');
+    });
+    overlay.addEventListener('click', function() {
+        panel.classList.remove('open');
+        overlay.classList.remove('open');
+    });
+
+    document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var theme = this.dataset.theme;
+            applyTheme(theme);
+            localStorage.setItem('lifetok_theme', theme);
+            document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.theme === theme);
+            });
+        });
+    });
+
+    document.getElementById('languageSelect').addEventListener('change', function() {
+        currentLang = this.value;
+        localStorage.setItem('lifetok_lang', currentLang);
+        updateUITexts();
+    });
+    document.getElementById('languageSelect').value = currentLang;
+}
+
+function updateSettingsAccount() {
+    var el = document.getElementById('settingsAccount');
+    if (el && currentUser) el.textContent = currentUser.email;
+}
+
+// ============================================================
+// ===== НАВИГАЦИЯ =====
+// ============================================================
+function setupNavigation() {
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.addEventListener('click', function() {
+            document.querySelectorAll('.nav-item').forEach(function(n2) { n2.classList.remove('active'); });
+            this.classList.add('active');
+            var page = this.dataset.page;
+            document.getElementById('searchPage').classList.remove('active');
+            document.getElementById('profilePage').classList.remove('active');
+            document.getElementById('tiktokWrapper').style.display = 'none';
+            if (page === 'feed') {
+                document.getElementById('tiktokWrapper').style.display = 'block';
+                renderTikTokFeed();
+            } else if (page === 'search') {
+                document.getElementById('searchPage').classList.add('active');
+                document.getElementById('searchInput').focus();
+            } else if (page === 'profile') {
+                document.getElementById('profilePage').classList.add('active');
+                renderProfile();
+            }
+        });
+    });
+}
+
+function goBackFromSearch() {
+    document.getElementById('searchPage').classList.remove('active');
+    document.getElementById('tiktokWrapper').style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.classList.remove('active');
+        if (n.dataset.page === 'feed') n.classList.add('active');
+    });
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').innerHTML = '';
+}
+
+function goBackFromProfile() {
+    document.getElementById('profilePage').classList.remove('active');
+    document.getElementById('tiktokWrapper').style.display = 'block';
+    document.querySelectorAll('.nav-item').forEach(function(n) {
+        n.classList.remove('active');
+        if (n.dataset.page === 'feed') n.classList.add('active');
+    });
+}
+
+window.goBackFromSearch = goBackFromSearch;
+window.goBackFromProfile = goBackFromProfile;
+
+// ============================================================
+// ===== ПОИСК =====
+// ============================================================
+function setupSearch() {
+    document.getElementById('searchInput').addEventListener('input', function() {
+        var query = this.value.trim().toLowerCase();
+        var results = document.getElementById('searchResults');
+        if (!query) { results.innerHTML = ''; return; }
+
+        var filtered = Object.values(users).filter(function(u) {
+            return u.email !== currentUser.email && (u.nickname.toLowerCase().includes(query) || u.email.toLowerCase().includes(query));
+        });
+
+        if (filtered.length === 0) {
+            results.innerHTML = '<div style="text-align:center;color:#444;padding:20px;">'+t('nothingFound')+'</div>';
+            return;
+        }
+        results.innerHTML = filtered.map(function(u) {
+            return '<div class="search-user-item" onclick="showUserProfile(\''+u.email+'\')">'+
+                '<div class="search-user-avatar">'+(u.avatar?'<img src="'+u.avatar+'">':'👤')+'</div>'+
+                '<div class="search-user-info"><div class="search-user-name">'+u.nickname+'</div><div class="search-user-email">'+u.email+'</div></div>'+
+            '</div>';
+        }).join('');
+    });
+}
+
+// ============================================================
+// ===== СОЗДАНИЕ ПОСТОВ =====
+// ============================================================
+function setupCreateButtons() {
+    var createBtn = document.getElementById('createBtn');
+    var createMenu = document.getElementById('createMenu');
+
+    createBtn.addEventListener('click', function() {
+        createMenu.classList.toggle('hidden');
+    });
+
+    document.getElementById('createPhotoBtn').addEventListener('click', function() {
+        createMenu.classList.add('hidden');
+        var input = document.getElementById('fileInput');
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.value = '';
+        input.onchange = function(e) {
+            var files = e.target.files;
+            if (!files || files.length === 0) { input.value = ''; return; }
+            
+            var selected = Array.from(files).slice(0, 5);
+            var results = [];
+            var loaded = 0;
+            
+            selected.forEach(function(file, index) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    results[index] = ev.target.result;
+                    loaded++;
+                    if (loaded === selected.length) {
+                        showPostModal('carousel', results);
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = '';
+        };
+        input.click();
+    });
+
+    document.getElementById('createVideoBtn').addEventListener('click', function() {
+        createMenu.classList.add('hidden');
+        var input = document.getElementById('fileInput');
+        input.accept = 'video/*';
+        input.multiple = false;
+        input.value = '';
+        input.onchange = function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                var file = e.target.files[0];
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    showPostModal('video', [ev.target.result]);
+                };
+                reader.readAsDataURL(file);
+            }
+            input.value = '';
+        };
+        input.click();
+    });
+}
+
+function showPostModal(type, mediaData) {
+    if (window._postData && window._postData.modal) {
+        window._postData.modal.remove();
+        window._postData = null;
+    }
+
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay post-modal';
+
+    var isVideo = type === 'video';
+    var isCarousel = type === 'carousel';
+    var mediaItems = mediaData || [];
+
+    var previewHtml = '';
+    if (isVideo && mediaData && mediaData[0]) {
+        previewHtml = '<div class="preview-container"><video src="' + mediaData[0] + '" controls playsinline></video></div>';
+    } else if (isCarousel && mediaItems.length > 0) {
+        previewHtml = '<div class="preview-grid" id="previewGrid">' +
+            mediaItems.map(function(img, idx) {
+                return '<div class="preview-item" data-index="'+idx+'">' +
+                    '<img src="' + img + '">' +
+                    '<button class="remove-btn" data-idx="'+idx+'" onclick="removeMediaItem('+idx+')">✕</button>' +
+                '</div>';
+            }).join('') +
+        '</div>';
+    }
+
+    modal.innerHTML =
+        '<div class="modal-header"><div class="modal-title">' + t('addCaptionTitle') + '</div><button onclick="closePostModal()">✕</button></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:center;padding:10px 20px;flex:1;overflow-y:auto;justify-content:center;">' +
+        previewHtml +
+        (isCarousel && mediaItems.length < 5 ? '<button class="add-btn" onclick="addMorePhotos()">'+t('addPhoto')+'</button>' : '') +
+        '<textarea class="caption-input" id="captionTextarea" placeholder="' + t('enterCaption') + '" rows="2"></textarea>' +
+        '<div class="btn-row">' +
+        '<button class="cancel-btn" onclick="closePostModal()">' + t('cancel') + '</button>' +
+        '<button class="publish-btn" onclick="publishPost()">' + t('publish') + '</button>' +
+        '</div>' +
+        '</div>';
+    document.body.appendChild(modal);
+
+    window._postData = {
+        type: type,
+        media: mediaItems || [],
+        modal: modal
+    };
+
+    window.closePostModal = function() {
+        if (window._postData && window._postData.modal) {
+            window._postData.modal.remove();
+        }
+        window._postData = null;
+    };
+
+    window.removeMediaItem = function(idx) {
+        if (!window._postData || !window._postData.media) return;
+        if (idx >= window._postData.media.length) return;
+        window._postData.media.splice(idx, 1);
+        var grid = document.getElementById('previewGrid');
+        if (grid) {
+            grid.innerHTML = window._postData.media.map(function(img, i) {
+                return '<div class="preview-item" data-index="'+i+'">' +
+                    '<img src="' + img + '">' +
+                    '<button class="remove-btn" data-idx="'+i+'" onclick="removeMediaItem('+i+')">✕</button>' +
+                '</div>';
+            }).join('');
+        }
+        var addBtn = modal.querySelector('.add-btn');
+        if (addBtn) {
+            if (window._postData.media.length >= 5) addBtn.style.display = 'none';
+            else addBtn.style.display = 'block';
+        }
+    };
+
+    window.addMorePhotos = function() {
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.onchange = function(e) {
+            if (e.target.files && e.target.files.length > 0) {
+                var files = Array.from(e.target.files);
+                var remaining = 5 - (window._postData.media ? window._postData.media.length : 0);
+                if (files.length > remaining) {
+                    alert('Максимум 5 фото / Max 5 photos');
+                    files = files.slice(0, remaining);
+                }
+                var results = [];
+                var loaded = 0;
+                files.forEach(function(f, idx) {
+                    var reader = new FileReader();
+                    reader.onload = function(ev) {
+                        results[idx] = ev.target.result;
+                        loaded++;
+                        if (loaded === files.length) {
+                            window._postData.media = (window._postData.media || []).concat(results);
+                            var grid = document.getElementById('previewGrid');
+                            if (grid) {
+                                grid.innerHTML = window._postData.media.map(function(img, i) {
+                                    return '<div class="preview-item" data-index="'+i+'">' +
+                                        '<img src="' + img + '">' +
+                                        '<button class="remove-btn" data-idx="'+i+'" onclick="removeMediaItem('+i+')">✕</button>' +
+                                    '</div>';
+                                }).join('');
+                            }
+                            var addBtn = modal.querySelector('.add-btn');
+                            if (addBtn) {
+                                if (window._postData.media.length >= 5) addBtn.style.display = 'none';
+                                else addBtn.style.display = 'block';
+                            }
+                        }
+                    };
+                    reader.readAsDataURL(f);
+                });
+            }
+        };
+        input.click();
+    };
+
+    window.publishPost = function() {
+        var textarea = document.getElementById('captionTextarea');
+        var caption = textarea ? textarea.value.trim() : '';
+        var postType = window._postData ? window._postData.type : 'carousel';
+        var media = window._postData ? window._postData.media : [];
+
+        if (media.length === 0) {
+            alert('Выберите фото или видео! / Choose photo or video!');
+            return;
+        }
+
+        var id = Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+
+        if (postType === 'carousel') {
+            imageStorage[id] = media;
+        }
+
+        var post = {
+            id: id,
+            author: currentUser.email,
+            type: postType === 'video' ? 'video' : 'carousel',
+            images: postType === 'carousel' ? media : [],
+            content: postType === 'video' ? (media[0] || '') : '',
+            timestamp: new Date().toISOString(),
+            likes: [],
+            caption: caption,
+            thumbnail: media.length > 0 ? media[0] : null
+        };
+
+        posts.unshift(post);
+        saveData();
+
+        if (window._postData && window._postData.modal) {
+            window._postData.modal.remove();
+        }
+        window._postData = null;
+
+        renderTikTokFeed();
+        renderProfile();
+    };
+}
+
+// ============================================================
+// ===== ЛЕНТА =====
+// ============================================================
+function renderTikTokFeed() {
+    var container = document.getElementById('tiktokFeed');
+
+    if (!posts || posts.length === 0) {
+        container.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#444;text-align:center;padding:20px;flex-direction:column;"><div style="font-size:3em;margin-bottom:10px;">📭</div><p>'+t('noPosts')+'. '+t('beFirst')+'</p></div>';
+        return;
+    }
+
+    var html = posts.map(function(post, index) {
+        var isLiked = (post.likes || []).includes(currentUser ? currentUser.email : '');
+        var comments = post.comments || [];
+        var dateStr = new Date(post.timestamp).toLocaleDateString();
+
+        var author = users[post.author] || { nickname: 'Unknown', avatar: null };
+        var avatarHtml = author.avatar ? '<img src="'+author.avatar+'">' : '👤';
+
+        var contentHtml = '';
+        if (post.type === 'carousel' && post.images && post.images.length > 0) {
+            var images = post.images;
+            var slideCount = images.length;
+            contentHtml = '<div class="carousel-container" data-postid="' + post.id + '">' +
+                '<div class="carousel-track" id="track_' + post.id + '" style="transform: translateX(0%);">' +
+                images.map(function(img) {
+                    return '<div class="carousel-slide"><img src="' + img + '" onerror="this.style.display=\'none\'"></div>';
+                }).join('') +
+                '</div>' +
+                (slideCount > 1 ?
+                    '<button class="carousel-arrow left" onclick="event.stopPropagation();slideCarousel(\'' + post.id + '\', -1)">‹</button>' +
+                    '<button class="carousel-arrow right" onclick="event.stopPropagation();slideCarousel(\'' + post.id + '\', 1)">›</button>' +
+                    '<div class="carousel-dots" id="dots_' + post.id + '">' +
+                    images.map(function(_, i) {
+                        return '<button class="carousel-dot' + (i === 0 ? ' active' : '') + '" onclick="event.stopPropagation();goToSlide(\'' + post.id + '\',' + i + ')"></button>';
+                    }).join('') +
+                    '</div>' : '') +
+                '</div>';
+        } else if (post.type === 'video') {
+            contentHtml = '<div class="media-wrap"><video playsinline controls style="width:100%;height:100%;object-fit:contain;" src="' + (post.content || '') + '"></video></div>';
+        }
+
+        return '<div class="tiktok-item" data-index="' + index + '" data-postid="' + post.id + '">' +
+            '<div class="media-wrap">' + contentHtml + '</div>' +
+            '<div class="tiktok-overlay">' +
+            '<div class="user-info">' +
+            '<div class="user-avatar" onclick="showUserProfile(\'' + post.author + '\')">' + avatarHtml + '</div>' +
+            '<div class="user-name" onclick="showUserProfile(\'' + post.author + '\')">' + author.nickname + ' <span>· ' + dateStr + '</span></div>' +
+            '</div>' +
+            (post.caption ? '<div class="post-caption">📝 ' + post.caption + '</div>' : '') +
+            '</div>' +
+            '<div class="tiktok-profile-right">' +
+            '<div class="avatar" onclick="showUserProfile(\'' + post.author + '\')">' + avatarHtml + '</div>' +
+            (post.author !== currentUser?.email ? '<button class="subscribe-btn" onclick="toggleSubscribe(\'' + post.author + '\', this)">' + t('subscribe') + '</button>' : '') +
+            '</div>' +
+            '<div class="tiktok-actions">' +
+            '<button onclick="likePost(\'' + post.id + '\', this)">' +
+            (isLiked ? '❤️' : '🤍') +
+            '<span class="count" id="likeCount_' + post.id + '">' + (post.likes ? post.likes.length : 0) + '</span>' +
+            '</button>' +
+            '<button onclick="showComments(\'' + post.id + '\')">' +
+            '💬<span class="count">' + comments.length + '</span>' +
+            '</button>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+    container.innerHTML = html;
+
+    carouselState = {};
+    document.querySelectorAll('.carousel-container').forEach(function(container) {
+        var postId = container.dataset.postid;
+        if (postId) {
+            carouselState[postId] = 0;
+            var track = document.getElementById('track_' + postId);
+            if (track) track.style.transform = 'translateX(0%)';
+        }
+    });
+}
+
+// ============================================================
+// ===== КАРУСЕЛЬ =====
+// ============================================================
+window.slideCarousel = function(postId, dir) {
+    var idx = (carouselState[postId] || 0) + dir;
+    var track = document.getElementById('track_' + postId);
+    if (!track) return;
+    var slides = track.querySelectorAll('.carousel-slide');
+    if (slides.length === 0) return;
+    if (idx < 0) idx = slides.length - 1;
+    if (idx >= slides.length) idx = 0;
+    carouselState[postId] = idx;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    var dots = document.querySelectorAll('#dots_' + postId + ' .carousel-dot');
+    dots.forEach(function(d, i) {
+        d.classList.toggle('active', i === idx);
+    });
+};
+
+window.goToSlide = function(postId, idx) {
+    var track = document.getElementById('track_' + postId);
+    if (!track) return;
+    var slides = track.querySelectorAll('.carousel-slide');
+    if (slides.length === 0) return;
+    if (idx < 0 || idx >= slides.length) return;
+    carouselState[postId] = idx;
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    var dots = document.querySelectorAll('#dots_' + postId + ' .carousel-dot');
+    dots.forEach(function(d, i) {
+        d.classList.toggle('active', i === idx);
+    });
+};
+
+// ============================================================
+// ===== ЛАЙКИ =====
+// ============================================================
+window.likePost = function(postId, btn) {
+    if (!currentUser) return;
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+
+    if (!post.likes) post.likes = [];
+    var idx = post.likes.indexOf(currentUser.email);
+    if (idx > -1) {
+        post.likes.splice(idx, 1);
+    } else {
+        post.likes.push(currentUser.email);
+    }
+    saveData();
+    var isLiked = post.likes.includes(currentUser.email);
+    btn.innerHTML = (isLiked ? '❤️' : '🤍') + '<span class="count" id="likeCount_' + postId + '">' + post.likes.length + '</span>';
+    renderProfile();
+};
+
+// ============================================================
+// ===== КОММЕНТАРИИ =====
+// ============================================================
+window.showComments = function(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML =
+        '<div class="modal-header"><div class="modal-title">' + t('comments') + '</div><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>' +
+        '<div class="modal-body" id="commentsBody_' + postId + '"></div>' +
+        '<div class="modal-comment-input"><input type="text" id="commentInput_' + postId + '" placeholder="' + t('write') + '"><button onclick="addComment(\'' + postId + '\')">➤</button></div>';
+    document.body.appendChild(modal);
+    renderComments(postId);
+};
+
+function renderComments(postId) {
+    var container = document.getElementById('commentsBody_' + postId);
+    if (!container) return;
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) { container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">' + t('noComments') + '</div>'; return; }
+
+    var comments = post.comments || [];
+    if (comments.length === 0) {
+        container.innerHTML = '<div style="color:#666;text-align:center;padding:20px;">' + t('noComments') + '</div>';
+        return;
+    }
+
+    container.innerHTML = comments.map(function(c, index) {
+        var isOwner = c.author === currentUser?.email;
+        return '<div class="modal-comment">' +
+            '<div class="comment-user">' + (c.author || 'Unknown') + '</div>' +
+            (isOwner ? '<button class="comment-delete-btn" onclick="deleteComment(\''+postId+'\','+index+')">✕</button>' : '') +
+            '<div class="comment-text">' + c.text + '</div>' +
+            '<div class="comment-date">' + new Date(c.timestamp).toLocaleString() + '</div>' +
+            '</div>';
+    }).join('');
+}
+
+window.addComment = function(postId) {
+    if (!currentUser) return;
+    var input = document.getElementById('commentInput_' + postId);
+    if (!input || !input.value.trim()) return;
+
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+    if (!post.comments) post.comments = [];
+
+    post.comments.push({
+        author: currentUser.email,
+        text: input.value.trim(),
+        timestamp: new Date().toISOString()
+    });
+    saveData();
+    input.value = '';
+    renderComments(postId);
+    renderTikTokFeed();
+};
+
+window.deleteComment = function(postId, index) {
+    if (!confirm(t('delete'))) return;
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post || !post.comments) return;
+    post.comments.splice(index, 1);
+    saveData();
+    renderComments(postId);
+    renderTikTokFeed();
+};
+
+// ============================================================
+// ===== ПРОФИЛЬ =====
+// ============================================================
+function renderProfile(tab) {
+    var container = document.getElementById('profileContent');
+    if (!currentUser) return;
+
+    var user = currentUser;
+    var userPosts = posts.filter(function(p) { return p.author === user.email; });
+    var likedPosts = posts.filter(function(p) { return p.likes && p.likes.includes(user.email); });
+
+    var currentTab = tab || 'posts';
+    var postsHtml = '';
+    var targetPosts = currentTab === 'liked' ? likedPosts : userPosts;
+    targetPosts.sort(function(a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+
+    if (targetPosts.length === 0) {
+        postsHtml = '<div style="grid-column:1/-1;text-align:center;color:#444;padding:40px;">' + (currentTab === 'liked' ? t('liked') + ' ❤️' : t('noPosts')) + '</div>';
+    } else {
+        postsHtml = targetPosts.map(function(post) {
+            var thumbSrc = post.thumbnail || (post.images && post.images[0]) || post.content || '';
+            var isVideo = post.type === 'video';
+            return '<div class="profile-post-thumb" onclick="viewPost(\'' + post.id + '\')">' +
+                (post.author === currentUser.email ? '<button class="delete-post-btn" onclick="event.stopPropagation();deletePost(\'' + post.id + '\')">✕</button>' : '') +
+                '<img src="' + thumbSrc + '" onerror="this.src=\'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22300%22%3E%3Crect fill=%22%230a0a0a%22 width=%22300%22 height=%22300%22/%3E%3Ctext x=%22150%22 y=%22160%22 text-anchor=%22middle%22 font-size=%2260%22 fill=%22%23ff0033%22%3E' + (isVideo ? '▶' : '📷') + '%3C/text%3E%3C/svg%3E\'">' +
+                (isVideo ? '<span class="badge">▶</span>' : '') +
+                (post.caption ? '<span class="like-badge" style="bottom:24px;">📝</span>' : '') +
+                '<span class="like-badge">❤️ ' + (post.likes ? post.likes.length : 0) + '</span>' +
+                '</div>';
+        }).join('');
+    }
+
+    var html =
+        '<div class="profile-header-top">' +
+        '<button class="profile-back-btn" onclick="goBackFromProfile()">← ' + t('back') + '</button>' +
+        '<div class="profile-title">' + t('profile') + '</div>' +
+        '<button class="profile-settings-btn" onclick="openSettings()">☰</button>' +
+        '</div>' +
+        '<div class="profile-header">' +
+        '<div class="profile-avatar" onclick="document.getElementById(\'avatarInput\').click()">' + (user.avatar ? '<img src="' + user.avatar + '">' : '👤') + '</div>' +
+        '<div class="profile-name">' + user.nickname + '</div>' +
+        '<div class="profile-email">' + user.email + '</div>' +
+        '<div class="profile-bio" onclick="editBio()">' + (user.bio || t('editBio')) + '</div>' +
+        '<input class="profile-bio-edit" id="bioInput" value="' + (user.bio || '') + '" placeholder="' + t('bioPlaceholder') + '">' +
+        '<div class="profile-stats">' +
+        '<div class="profile-stat"><div class="profile-stat-num">' + userPosts.length + '</div><div class="profile-stat-label">' + t('posts') + '</div></div>' +
+        '<div class="profile-stat"><div class="profile-stat-num">' + Object.values(users).filter(function(u) { return u.following && u.following.includes(user.email); }).length + '</div><div class="profile-stat-label">' + t('followers') + '</div></div>' +
+        '<div class="profile-stat"><div class="profile-stat-num">' + (user.following ? user.following.length : 0) + '</div><div class="profile-stat-label">' + t('following') + '</div></div>' +
+        '</div>' +
+        '<button class="profile-logout-btn" onclick="if(confirm(\'' + t('confirmLogout') + '\')){localStorage.removeItem(\'lifetok_user\');location.reload();}">' + t('logout') + '</button>' +
+        '</div>' +
+        '<div class="profile-tabs">' +
+        '<div class="profile-tab' + (currentTab === 'posts' ? ' active' : '') + '" onclick="renderProfile(\'posts\')">📷 ' + t('posts') + '</div>' +
+        '<div class="profile-tab' + (currentTab === 'liked' ? ' active' : '') + '" onclick="renderProfile(\'liked\')">❤️ ' + t('liked') + '</div>' +
+        '</div>' +
+        '<div class="profile-posts-grid">' + postsHtml + '</div>';
+
+    container.innerHTML = html;
+
+    var avatarInput = document.getElementById('avatarInput');
+    if (!avatarInput) {
+        avatarInput = document.createElement('input');
+        avatarInput.id = 'avatarInput';
+        avatarInput.type = 'file';
+        avatarInput.accept = 'image/*';
+        avatarInput.style.display = 'none';
+        avatarInput.addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(ev) {
+                    var img = new Image();
+                    img.onload = function() {
+                        var canvas = document.createElement('canvas');
+                        var size = Math.min(img.width, img.height);
+                        canvas.width = 200;
+                        canvas.height = 200;
+                        var ctx = canvas.getContext('2d');
+                        var sx = (img.width - size) / 2;
+                        var sy = (img.height - size) / 2;
+                        ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+                        var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        currentUser.avatar = dataUrl;
+                        users[currentUser.email].avatar = dataUrl;
+                        saveData();
+                        renderProfile(currentTab);
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+        document.body.appendChild(avatarInput);
+    }
+}
+
+window.renderProfile = renderProfile;
+
+function editBio() {
+    var bioEl = document.querySelector('.profile-bio');
+    var inputEl = document.getElementById('bioInput');
+    if (!bioEl || !inputEl) return;
+    if (inputEl.style.display === 'block') {
+        var newBio = inputEl.value.trim();
+        currentUser.bio = newBio;
+        users[currentUser.email].bio = newBio;
+        saveData();
+        renderProfile();
+    } else {
+        bioEl.style.display = 'none';
+        inputEl.style.display = 'block';
+        inputEl.focus();
+        inputEl.select();
+        inputEl.onblur = function() { editBio(); };
+        inputEl.onkeydown = function(e) { if (e.key === 'Enter') editBio(); };
+    }
+}
+
+// ============================================================
+// ===== ПРОСМОТР ПОСТА =====
+// ============================================================
+window.viewPost = function(postId) {
+    var post = posts.find(function(p) { return p.id === postId; });
+    if (!post) return;
+
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    var content = '';
+
+    if (post.type === 'carousel' && post.images && post.images.length > 0) {
+        content = '<div class="carousel-container" id="modalCarousel">' +
+            '<div class="carousel-track" id="modalTrack">' +
+            post.images.map(function(img) {
+                return '<div class="carousel-slide"><img src="' + img + '" onerror="this.style.display=\'none\'"></div>';
+            }).join('') +
+            '</div>' +
+            (post.images.length > 1 ?
+                '<button class="carousel-arrow left" onclick="slideModalCarousel(-1)">‹</button>' +
+                '<button class="carousel-arrow right" onclick="slideModalCarousel(1)">›</button>' +
+                '<div class="carousel-dots" id="modalDots">' +
+                post.images.map(function(_, i) {
+                    return '<button class="carousel-dot' + (i === 0 ? ' active' : '') + '" onclick="goToModalSlide('+i+')"></button>';
+                }).join('') +
+                '</div>' : '') +
+            '</div>';
+        window._modalCarouselIndex = 0;
+        window._modalCarouselSlides = post.images.length;
+        window.slideModalCarousel = function(dir) {
+            var idx = (window._modalCarouselIndex || 0) + dir;
+            if (idx < 0) idx = window._modalCarouselSlides - 1;
+            if (idx >= window._modalCarouselSlides) idx = 0;
+            window._modalCarouselIndex = idx;
+            var track = document.getElementById('modalTrack');
+            if (track) track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+            document.querySelectorAll('#modalDots .carousel-dot').forEach(function(d, i) {
+                d.classList.toggle('active', i === idx);
+            });
+        };
+        window.goToModalSlide = function(idx) {
+            window._modalCarouselIndex = idx;
+            var track = document.getElementById('modalTrack');
+            if (track) track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+            document.querySelectorAll('#modalDots .carousel-dot').forEach(function(d, i) {
+                d.classList.toggle('active', i === idx);
+            });
+        };
+    } else if (post.type === 'video') {
+        content = '<video controls style="max-width:100%;max-height:70vh;" src="' + (post.content || '') + '"></video>';
+    }
+
+    modal.innerHTML =
+        '<div class="modal-header"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button><span>' + (post.author || 'Unknown') + '</span></div>' +
+        (post.caption ? '<div style="text-align:center;padding:8px 20px;color:#aaa;border-bottom:1px solid #1a1a1a;">📝 ' + post.caption + '</div>' : '') +
+        '<div style="display:flex;align-items:center;justify-content:center;flex:1;padding:10px;overflow:hidden;">' + content + '</div>';
+    document.body.appendChild(modal);
+};
+
+// ============================================================
+// ===== ПОДПИСКА =====
+// ============================================================
+window.toggleSubscribe = function(email, btn) {
+    if (!currentUser) return;
+    if (!currentUser.following) currentUser.following = [];
+
+    var idx = currentUser.following.indexOf(email);
+    if (idx > -1) {
+        currentUser.following.splice(idx, 1);
+        btn.textContent = t('subscribe');
+        btn.classList.remove('subscribed');
+    } else {
+        currentUser.following.push(email);
+        btn.textContent = t('subscribed');
+        btn.classList.add('subscribed');
+    }
+    users[currentUser.email].following = currentUser.following;
+    saveData();
+};
+
+// ============================================================
+// ===== ПОКАЗАТЬ ПРОФИЛЬ ПОЛЬЗОВАТЕЛЯ =====
+// ============================================================
+window.showUserProfile = function(email) {
+    if (email === currentUser?.email) {
+        document.querySelector('[data-page="profile"]').click();
+        return;
+    }
+
+    var user = users[email];
+    if (!user) {
+        alert('Пользователь не найден / User not found');
+        return;
+    }
+
+    var modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    var isSubscribed = currentUser.following && currentUser.following.includes(email);
+
+    modal.innerHTML =
+        '<div class="modal-header"><button onclick="this.closest(\'.modal-overlay\').remove()">✕</button><span>'+t('profile')+'</span></div>' +
+        '<div style="text-align:center;padding:30px 20px;color:#fff;">' +
+        '<div style="width:80px;height:80px;border-radius:50%;margin:0 auto 10px;background:linear-gradient(135deg,#ff0033,#cc0033);display:flex;align-items:center;justify-content:center;font-size:2em;overflow:hidden;border:3px solid #ff0033;">' + (user.avatar ? '<img src="'+user.avatar+'" style="width:100%;height:100%;object-fit:cover;">' : '👤') + '</div>' +
+        '<div style="font-weight:700;font-size:1.2em;">' + user.nickname + '</div>' +
+        '<div style="color:#888;font-size:0.8em;">' + user.email + '</div>' +
+        (user.bio ? '<div style="color:#aaa;font-size:0.85em;margin-top:5px;">' + user.bio + '</div>' : '') +
+        '<div style="margin-top:15px;"><button class="subscribe-btn' + (isSubscribed ? ' subscribed' : '') + '" onclick="toggleSubscribe(\''+email+'\', this);" style="background:#ff0033;color:#fff;border:none;padding:8px 24px;border-radius:8px;font-size:0.9em;font-weight:700;cursor:pointer;">' + (isSubscribed ? t('subscribed') : t('subscribe')) + '</button></div>' +
+        '</div>';
+    document.body.appendChild(modal);
+};
+
+// ============================================================
+// ===== УДАЛЕНИЕ ПОСТА =====
+// ============================================================
+window.deletePost = function(postId) {
+    if (!confirm(t('delete'))) return;
+    if (!currentUser) return;
+
+    var idx = posts.findIndex(function(p) { return p.id === postId; });
+    if (idx > -1) {
+        posts.splice(idx, 1);
+        saveData();
+        renderTikTokFeed();
+        renderProfile();
+    }
+};
+
+// ============================================================
+// ===== ТЕМЫ =====
+// ============================================================
+function applyTheme(theme) {
+    document.body.classList.remove('light-theme', 'green-theme', 'pink-theme');
+    if (theme === 'light') document.body.classList.add('light-theme');
+    else if (theme === 'green') document.body.classList.add('green-theme');
+    else if (theme === 'pink') document.body.classList.add('pink-theme');
+    localStorage.setItem('lifetok_theme', theme);
+    currentTheme = theme;
+    document.querySelectorAll('.theme-btns .toggle-btn').forEach(function(b) {
+        b.classList.toggle('active', b.dataset.theme === theme);
+    });
+}
+var currentTheme = localStorage.getItem('lifetok_theme') || 'dark';
+applyTheme(currentTheme);
+
+// ============================================================
+// ===== СОХРАНЕНИЕ ПРИ ВЫХОДЕ =====
+// ============================================================
+window.addEventListener('beforeunload', function() {
+    if (isAppReady) {
+        saveData();
+    }
+});
+
+// Автосохранение каждые 10 секунд
+setInterval(function() {
+    if (isAppReady) {
+        saveData();
+    }
+}, 10000);
+
+console.log('📱 LifeTok для телефона');
+console.log('📦 Постов: ' + posts.length);
+console.log('👤 Пользователей: ' + Object.keys(users).length);
+</script>
+
+</body>
+</html>
