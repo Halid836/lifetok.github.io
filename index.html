@@ -1,1 +1,656 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LifeTok</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .splash-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #000; flex-direction: column; gap: 20px; }
+        .splash-logo { font-size: 4em; font-weight: 900; letter-spacing: 6px; background: linear-gradient(135deg, #00f260, #0575e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.05); } }
+        .splash-subtitle { color: #555; font-size: 0.9em; letter-spacing: 6px; }
+
+        .auth-screen { min-height: 100vh; display: none; align-items: center; justify-content: center; padding: 20px; background: linear-gradient(180deg, #0a1a0a 0%, #000 100%); }
+        .auth-box { width: 100%; max-width: 350px; text-align: center; }
+        .auth-logo { font-size: 3.5em; font-weight: 900; background: linear-gradient(135deg, #00f260, #0575e6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 5px; }
+        .auth-subtitle { color: #666; font-size: 0.75em; letter-spacing: 6px; margin-bottom: 30px; }
+        .auth-input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; color: #fff; padding: 14px 16px; border-radius: 10px; font-size: 0.95em; margin-bottom: 12px; outline: none; }
+        .auth-input:focus { border-color: #00f260; }
+        .auth-input::placeholder { color: #555; }
+        .auth-btn { width: 100%; background: #00f260; color: #000; border: none; padding: 14px; border-radius: 10px; font-size: 1em; font-weight: 700; cursor: pointer; margin-top: 5px; }
+        .auth-switch { color: #888; font-size: 0.85em; margin-top: 18px; }
+        .auth-switch span { color: #00f260; cursor: pointer; font-weight: 600; }
+        .error-msg { color: #ff4757; font-size: 0.8em; margin-bottom: 10px; display: none; }
+        .success-msg { color: #00f260; font-size: 0.8em; margin-bottom: 10px; display: none; }
+
+        .main-screen { display: none; }
+        .main-screen.active { display: block; }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #0a0a0a; border-top: 1px solid #1a1a1a; display: flex; z-index: 100; padding: 6px 0 18px; }
+        .nav-item { flex: 1; text-align: center; cursor: pointer; color: #666; font-size: 0.65em; padding: 5px; }
+        .nav-item.active { color: #00f260; }
+        .nav-icon { font-size: 1.6em; display: block; margin-bottom: 3px; }
+        .page { display: none; padding-bottom: 70px; min-height: 100vh; }
+        .page.active { display: block; }
+
+        .feed-header { padding: 12px 15px; text-align: center; font-weight: 700; font-size: 1em; border-bottom: 1px solid #1a1a1a; position: sticky; top: 0; background: #000; z-index: 10; }
+        .feed-tabs { display: flex; gap: 12px; justify-content: center; margin-top: 8px; }
+        .feed-tab { cursor: pointer; color: #888; font-size: 0.75em; padding: 6px 14px; border-radius: 20px; background: #1a1a1a; }
+        .feed-tab.active { color: #000; background: #00f260; font-weight: 600; }
+
+        .post { border-bottom: 1px solid #1a1a1a; padding-bottom: 8px; }
+        .post-header { display: flex; align-items: center; padding: 10px 15px; gap: 10px; }
+        .post-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #00f260, #0575e6); display: flex; align-items: center; justify-content: center; font-size: 1.2em; cursor: pointer; overflow: hidden; flex-shrink: 0; border: 2px solid #1a1a1a; }
+        .post-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .post-user { flex: 1; cursor: pointer; }
+        .post-nickname { font-weight: 600; font-size: 0.85em; }
+        .post-date { font-size: 0.65em; color: #666; margin-top: 1px; }
+        .subscribe-btn { background: #00f260; color: #000; border: none; padding: 6px 14px; border-radius: 8px; font-size: 0.75em; font-weight: 700; cursor: pointer; white-space: nowrap; }
+        .subscribe-btn.subscribed { background: #1a1a1a; color: #888; border: 1px solid #333; }
+        .post-media { width: 100%; background: #000; position: relative; }
+        .post-media img { width: 100%; display: block; max-height: 400px; object-fit: contain; }
+        .post-media video { width: 100%; display: block; background: #000; max-height: 400px; }
+        .post-actions { display: flex; align-items: center; padding: 8px 15px; gap: 18px; }
+        .post-action { cursor: pointer; font-size: 1.3em; display: flex; align-items: center; gap: 5px; background: none; border: none; color: #fff; padding: 4px; }
+        .post-action.liked { color: #ff4757; }
+        .post-action-count { font-size: 0.6em; font-weight: 600; }
+        .post-likes { font-size: 0.8em; font-weight: 600; padding: 0 15px; margin-bottom: 6px; }
+        .post-add-comment { display: flex; padding: 8px 15px; border-top: 1px solid #1a1a1a; gap: 10px; }
+        .post-add-comment input { flex: 1; background: none; border: none; color: #fff; outline: none; font-size: 0.8em; }
+        .post-add-comment input::placeholder { color: #555; }
+        .post-add-comment button { background: none; border: none; color: #00f260; font-weight: 700; cursor: pointer; font-size: 0.8em; }
+        .post-delete-btn { background: none; border: none; color: #ff4757; cursor: pointer; font-size: 0.85em; padding: 5px; }
+
+        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 200; display: flex; flex-direction: column; }
+        .overlay-header { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #1a1a1a; gap: 15px; }
+        .overlay-header button { background: none; border: none; color: #fff; font-size: 1.2em; cursor: pointer; }
+        .comments-list { flex: 1; overflow-y: auto; padding: 15px; }
+        .comment { display: flex; gap: 10px; margin-bottom: 16px; }
+        .comment-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #00f260, #0575e6); display: flex; align-items: center; justify-content: center; font-size: 0.85em; flex-shrink: 0; overflow: hidden; cursor: pointer; }
+        .comment-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .comment-body { flex: 1; }
+        .comment-user { font-weight: 600; font-size: 0.8em; cursor: pointer; }
+        .comment-text { font-size: 0.85em; color: #ddd; margin-top: 2px; }
+        .comment-time { font-size: 0.7em; color: #666; margin-top: 2px; }
+        .comment-input-area { display: flex; padding: 10px 15px; border-top: 1px solid #1a1a1a; gap: 10px; }
+        .comment-input-area input { flex: 1; background: #1a1a1a; border: none; color: #fff; padding: 10px 14px; border-radius: 20px; outline: none; font-size: 0.85em; }
+        .comment-input-area button { background: #00f260; color: #000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; cursor: pointer; font-size: 0.85em; }
+
+        .search-bar { padding: 10px 15px; }
+        .search-bar input { width: 100%; background: #1a1a1a; border: 1px solid #2a2a2a; color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 0.9em; outline: none; }
+        .search-bar input:focus { border-color: #00f260; }
+        .user-list { padding: 8px 15px; }
+        .user-item { display: flex; align-items: center; padding: 12px 10px; gap: 12px; border-bottom: 1px solid #111; cursor: pointer; border-radius: 10px; }
+        .user-item-avatar { width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #00f260, #0575e6); display: flex; align-items: center; justify-content: center; font-size: 1.2em; overflow: hidden; flex-shrink: 0; }
+        .user-item-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .user-item-info { flex: 1; }
+        .user-item-name { font-weight: 600; font-size: 0.9em; }
+        .user-item-stats { font-size: 0.7em; color: #888; margin-top: 2px; }
+
+        .profile-header-page { text-align: center; padding: 25px 20px 15px; }
+        .profile-avatar-large { width: 85px; height: 85px; border-radius: 50%; background: linear-gradient(135deg, #00f260, #0575e6); margin: 0 auto 10px; display: flex; align-items: center; justify-content: center; font-size: 2em; border: 3px solid #00f260; box-shadow: 0 0 25px rgba(0, 242, 96, 0.3); overflow: hidden; cursor: pointer; }
+        .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+        .profile-nickname-display { font-size: 1.2em; font-weight: 700; }
+        .profile-email-display { color: #888; font-size: 0.8em; margin-bottom: 12px; }
+        .profile-stats-row { display: flex; justify-content: center; gap: 30px; margin: 15px 0; }
+        .profile-stat-item { text-align: center; cursor: pointer; }
+        .profile-stat-num { font-size: 1.2em; font-weight: 700; }
+        .profile-stat-label { font-size: 0.65em; color: #888; }
+        .profile-action-btn { background: #1a1a1a; color: #fff; border: 1px solid #333; padding: 8px 24px; border-radius: 8px; font-size: 0.85em; cursor: pointer; margin: 4px; }
+        .profile-action-btn.primary { background: #00f260; color: #000; border-color: #00f260; }
+        .profile-posts-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; }
+        .profile-post-thumb { aspect-ratio: 1; overflow: hidden; position: relative; cursor: pointer; background: #0a0a0a; }
+        .profile-post-thumb img, .profile-post-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .profile-post-thumb .video-icon { position: absolute; top: 6px; right: 6px; font-size: 1em; background: rgba(0,0,0,0.6); border-radius: 4px; padding: 2px 5px; pointer-events: none; z-index: 2; }
+        .profile-post-thumb .likes-count { position: absolute; bottom: 4px; left: 4px; font-size: 0.65em; background: rgba(0,0,0,0.6); padding: 2px 6px; border-radius: 4px; pointer-events: none; z-index: 2; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 200; overflow-y: auto; }
+        .modal-header { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #1a1a1a; gap: 15px; position: sticky; top: 0; background: #000; z-index: 10; }
+        .modal-header button { background: none; border: none; color: #fff; font-size: 1.2em; cursor: pointer; }
+        .empty-state { text-align: center; padding: 50px 20px; color: #444; }
+        .empty-icon { font-size: 3em; margin-bottom: 8px; opacity: 0.3; }
+        .create-btn { position: fixed; bottom: 80px; right: 20px; width: 52px; height: 52px; border-radius: 50%; background: #00f260; color: #000; border: none; font-size: 1.5em; cursor: pointer; z-index: 90; box-shadow: 0 4px 20px rgba(0, 242, 96, 0.4); display: flex; align-items: center; justify-content: center; }
+        .create-menu-mini { position: fixed; bottom: 140px; right: 20px; background: #1a1a1a; border-radius: 14px; padding: 10px; z-index: 150; display: flex; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.8); }
+        .create-menu-mini button { background: none; border: none; color: #fff; cursor: pointer; font-size: 1.4em; padding: 8px; border-radius: 10px; }
+        .hidden { display: none !important; }
+        .loading-spinner { text-align: center; padding: 20px; color: #888; }
+    </style>
+</head>
+<body>
+
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-logo">LIFETOK</div>
+        <div class="splash-subtitle">MOMENTS</div>
+    </div>
+
+    <div class="auth-screen" id="authScreen">
+        <div class="auth-box">
+            <div class="auth-logo">LIFETOK</div>
+            <div class="auth-subtitle">MOMENTS</div>
+            <div class="error-msg" id="authError"></div>
+            <div class="success-msg" id="authSuccess"></div>
+            <input type="email" class="auth-input" id="authEmail" placeholder="Почта">
+            <input type="text" class="auth-input" id="authNickname" placeholder="Никнейм">
+            <input type="password" class="auth-input" id="authPassword" placeholder="Пароль">
+            <button class="auth-btn" id="authBtn">Войти</button>
+            <div class="auth-switch"><span id="authSwitch">Создать аккаунт</span></div>
+        </div>
+    </div>
+
+    <div class="main-screen" id="mainScreen">
+        <div class="page active" id="feedPage">
+            <div class="feed-header">LIFETOK<div class="feed-tabs"><span class="feed-tab active" data-feed="all">Все</span><span class="feed-tab" data-feed="following">Подписки</span></div></div>
+            <div id="feedContainer"><div class="loading-spinner">Загрузка...</div></div>
+        </div>
+        <div class="page" id="searchPage"><div class="feed-header">ПОИСК</div><div class="search-bar"><input type="text" id="searchInput" placeholder="Найти людей..."></div><div class="user-list" id="searchResults"></div></div>
+        <div class="page" id="profilePage"><div id="myProfileContent"></div></div>
+        <div class="bottom-nav"><div class="nav-item active" data-page="feedPage"><span class="nav-icon">🏠</span>Лента</div><div class="nav-item" data-page="searchPage"><span class="nav-icon">🔍</span>Поиск</div><div class="nav-item" data-page="profilePage"><span class="nav-icon">👤</span>Профиль</div></div>
+        <button class="create-btn" id="createBtn">+</button>
+        <div class="create-menu-mini hidden" id="createMenuMini"><button id="createPhotoBtn">📸</button><button id="createVideoBtn">🎬</button></div>
+    </div>
+
+    <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="videoInput" accept="video/*" capture="environment" style="display:none">
+
+    <script>
+        // ============ ОБЛАЧНАЯ БАЗА ДАННЫХ (без регистрации!) ============
+        // Используем несколько бесплатных JSON-хранилищ
+        
+        const DB_URL = 'https://api.jsonbin.io/v3/b/693d0d78e1dc7c2b9b11321c';
+        const DB_KEY = '$2a$10$YOUR_ACCESS_KEY'; // Бесплатный ключ с jsonbin.io
+        
+        // Альтернативные бесплатные БД (если jsonbin не работает):
+        const BACKUP_DB = 'https://jsonblob.com/api/jsonBlob/1310842957049438208';
+        
+        let DB;
+        let currentUser = null;
+        let currentFeedTab = 'all';
+        let isSaving = false;
+
+        // ============ ИНИЦИАЛИЗАЦИЯ БАЗЫ ДАННЫХ ============
+        async function initDB() {
+            try {
+                // Пробуем загрузить данные из облака
+                const response = await fetch(DB_URL, {
+                    headers: { 'X-Access-Key': DB_KEY }
+                });
+                
+                if (response.ok) {
+                    const json = await response.json();
+                    DB = json.record;
+                } else {
+                    throw new Error('Not found');
+                }
+            } catch(e) {
+                // Если облако недоступно - используем localStorage
+                console.log('Используем локальное хранилище');
+                DB = JSON.parse(localStorage.getItem('lifetok_db') || JSON.stringify({
+                    users: {},
+                    posts: [],
+                    comments: {}
+                }));
+                
+                // Создаём демо-пользователей если пусто
+                if (Object.keys(DB.users).length === 0) {
+                    DB.users['alice@mail.com'] = { email: 'alice@mail.com', nickname: 'Alice', password: '1234', avatar: '', followers: [], following: [], postsCount: 0 };
+                    DB.users['bob@mail.com'] = { email: 'bob@mail.com', nickname: 'Bob', password: '1234', avatar: '', followers: [], following: [], postsCount: 0 };
+                    DB.users['carol@mail.com'] = { email: 'carol@mail.com', nickname: 'Carol', password: '1234', avatar: '', followers: [], following: [], postsCount: 0 };
+                }
+                saveDB();
+            }
+        }
+
+        async function saveDB() {
+            if (isSaving) return;
+            isSaving = true;
+            
+            // Сохраняем локально
+            localStorage.setItem('lifetok_db', JSON.stringify(DB));
+            
+            // Пробуем сохранить в облако
+            try {
+                await fetch(DB_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Access-Key': DB_KEY
+                    },
+                    body: JSON.stringify(DB)
+                });
+            } catch(e) {
+                // Облако недоступно - данные в localStorage
+            }
+            
+            setTimeout(() => { isSaving = false; }, 1000);
+        }
+
+        // ============ ЗАСТАВКА ============
+        const splash = document.getElementById('splashScreen');
+        
+        async function init() {
+            await initDB();
+            await new Promise(r => setTimeout(r, 2000));
+            splash.style.display = 'none';
+            
+            const saved = localStorage.getItem('lifetok_current_user');
+            if (saved) {
+                currentUser = saved;
+                if (DB.users[currentUser]) {
+                    enterApp();
+                    return;
+                }
+            }
+            document.getElementById('authScreen').style.display = 'flex';
+        }
+        
+        init();
+
+        // ============ АВТОРИЗАЦИЯ ============
+        document.getElementById('authSwitch').addEventListener('click', function() {
+            const btn = document.getElementById('authBtn');
+            const isLogin = btn.textContent === 'Войти';
+            btn.textContent = isLogin ? 'Зарегистрироваться' : 'Войти';
+            this.textContent = isLogin ? 'Уже есть аккаунт' : 'Создать аккаунт';
+        });
+
+        document.getElementById('authBtn').addEventListener('click', function() {
+            const email = document.getElementById('authEmail').value.trim().toLowerCase();
+            const nickname = document.getElementById('authNickname').value.trim();
+            const password = document.getElementById('authPassword').value;
+            const isLogin = this.textContent === 'Войти';
+            const errorEl = document.getElementById('authError');
+            const successEl = document.getElementById('authSuccess');
+            
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+            
+            if (!email || !nickname || !password) { errorEl.textContent = 'Заполни все поля'; errorEl.style.display = 'block'; return; }
+            if (!email.includes('@')) { errorEl.textContent = 'Неверная почта'; errorEl.style.display = 'block'; return; }
+            if (password.length < 4) { errorEl.textContent = 'Пароль минимум 4 символа'; errorEl.style.display = 'block'; return; }
+            
+            if (isLogin) {
+                if (DB.users[email] && DB.users[email].password === password) {
+                    currentUser = email;
+                    localStorage.setItem('lifetok_current_user', email);
+                    successEl.textContent = '✓ Вход!';
+                    successEl.style.display = 'block';
+                    setTimeout(enterApp, 400);
+                } else {
+                    errorEl.textContent = 'Неверная почта или пароль';
+                    errorEl.style.display = 'block';
+                }
+            } else {
+                if (DB.users[email]) { errorEl.textContent = 'Почта занята'; errorEl.style.display = 'block'; return; }
+                DB.users[email] = { email, nickname, password, avatar: '', followers: [], following: [], postsCount: 0 };
+                saveDB();
+                currentUser = email;
+                localStorage.setItem('lifetok_current_user', email);
+                successEl.textContent = '✓ Аккаунт создан!';
+                successEl.style.display = 'block';
+                setTimeout(enterApp, 400);
+            }
+        });
+
+        function enterApp() {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainScreen').classList.add('active');
+            updateMyProfile();
+            renderFeed();
+            renderSearch();
+        }
+
+        function getMe() { return DB.users[currentUser] || {}; }
+        function getUser(email) { return DB.users[email] || null; }
+
+        // ============ НАВИГАЦИЯ ============
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                this.classList.add('active');
+                document.getElementById(this.dataset.page).classList.add('active');
+                if (this.dataset.page === 'profilePage') updateMyProfile();
+                if (this.dataset.page === 'feedPage') renderFeed();
+                if (this.dataset.page === 'searchPage') renderSearch();
+            });
+        });
+
+        document.querySelectorAll('.feed-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.feed-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                currentFeedTab = this.dataset.feed;
+                renderFeed();
+            });
+        });
+
+        // ============ СОЗДАНИЕ ПОСТА ============
+        const createBtn = document.getElementById('createBtn');
+        const createMenu = document.getElementById('createMenuMini');
+        let menuVisible = false;
+
+        createBtn.addEventListener('click', e => { e.stopPropagation(); menuVisible = !menuVisible; createMenu.classList.toggle('hidden', !menuVisible); });
+        document.addEventListener('click', e => { if (menuVisible && !createMenu.contains(e.target) && e.target !== createBtn) { menuVisible = false; createMenu.classList.add('hidden'); } });
+        document.getElementById('createPhotoBtn').addEventListener('click', () => { menuVisible = false; createMenu.classList.add('hidden'); document.getElementById('photoInput').click(); });
+        document.getElementById('createVideoBtn').addEventListener('click', () => { menuVisible = false; createMenu.classList.add('hidden'); document.getElementById('videoInput').click(); });
+
+        function createPost(file, type) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const post = {
+                    id: Date.now().toString(),
+                    author: currentUser,
+                    type: type,
+                    url: e.target.result,
+                    likes: [],
+                    comments: [],
+                    created: new Date().toISOString()
+                };
+                DB.posts.unshift(post);
+                getMe().postsCount = (getMe().postsCount || 0) + 1;
+                saveDB();
+                document.querySelector('.nav-item[data-page="feedPage"]').click();
+                renderFeed();
+                updateMyProfile();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        document.getElementById('photoInput').addEventListener('change', function(e) { if (e.target.files[0]) createPost(e.target.files[0], 'image'); this.value = ''; });
+        document.getElementById('videoInput').addEventListener('change', function(e) { if (e.target.files[0]) createPost(e.target.files[0], 'video'); this.value = ''; });
+
+        // ============ ЛАЙКИ ============
+        function toggleLike(postId) {
+            const post = DB.posts.find(p => p.id === postId);
+            if (!post) return;
+            const idx = post.likes.indexOf(currentUser);
+            idx === -1 ? post.likes.push(currentUser) : post.likes.splice(idx, 1);
+            saveDB();
+        }
+
+        // ============ КОММЕНТАРИИ ============
+        function addComment(postId, text) {
+            if (!text?.trim()) return;
+            const post = DB.posts.find(p => p.id === postId);
+            if (!post) return;
+            post.comments.push({ user: currentUser, text: text.trim(), createdAt: new Date().toISOString() });
+            saveDB();
+        }
+
+        // ============ ПОДПИСКИ ============
+        function toggleFollow(targetEmail) {
+            if (targetEmail === currentUser) return;
+            const me = getMe();
+            const target = getUser(targetEmail);
+            if (!target) return;
+            
+            const idx = me.following.indexOf(targetEmail);
+            if (idx === -1) {
+                me.following.push(targetEmail);
+                target.followers.push(currentUser);
+            } else {
+                me.following.splice(idx, 1);
+                target.followers = target.followers.filter(e => e !== currentUser);
+            }
+            saveDB();
+        }
+
+        // ============ УДАЛЕНИЕ ПОСТА ============
+        function deletePost(postId) {
+            if (!confirm('Удалить пост?')) return;
+            DB.posts = DB.posts.filter(p => p.id !== postId);
+            getMe().postsCount = Math.max(0, (getMe().postsCount || 1) - 1);
+            saveDB();
+        }
+
+        // ============ ЛЕНТА ============
+        function renderFeed() {
+            const container = document.getElementById('feedContainer');
+            const allPosts = DB.posts.slice().sort((a, b) => b.id.localeCompare(a.id));
+            
+            let posts = currentFeedTab === 'following' ? 
+                allPosts.filter(p => p.author === currentUser || getMe().following.includes(p.author)) : 
+                allPosts;
+            
+            if (!posts.length) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-icon">📸</div><p>' + (currentFeedTab === 'following' ? 'Подпишитесь на людей' : 'Нет постов') + '</p></div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            posts.forEach(post => {
+                const author = getUser(post.author);
+                if (!author) return;
+                
+                const isLiked = post.likes.includes(currentUser);
+                const isFollowing = getMe().following.includes(post.author);
+                const isOwner = post.author === currentUser;
+                const date = formatDate(post.created);
+                
+                const div = document.createElement('div');
+                div.className = 'post';
+                div.innerHTML = `
+                    <div class="post-header">
+                        <div class="post-avatar" data-user="${post.author}">${author.avatar ? '<img src="'+author.avatar+'">' : '👤'}</div>
+                        <div class="post-user" data-user="${post.author}">
+                            <div class="post-nickname">${author.nickname} ${isOwner ? '<span style="color:#00f260;font-size:0.65em;">· вы</span>' : ''}</div>
+                            <div class="post-date">📅 ${date}</div>
+                        </div>
+                        ${!isOwner ? `<button class="subscribe-btn ${isFollowing ? 'subscribed' : ''}" data-sub="${post.author}">${isFollowing ? '✓' : '+'}</button>` : ''}
+                        ${isOwner ? `<button class="post-delete-btn" data-delete="${post.id}">🗑</button>` : ''}
+                    </div>
+                    <div class="post-media">
+                        ${post.type === 'image' ? '<img src="'+post.url+'" alt="Фото" loading="lazy">' : '<video controls src="'+post.url+'" style="width:100%;max-height:400px;" preload="metadata"></video>'}
+                    </div>
+                    <div class="post-actions">
+                        <button class="post-action like-btn ${isLiked ? 'liked' : ''}" data-like="${post.id}">${isLiked ? '❤' : '🤍'} <span class="post-action-count">${post.likes.length}</span></button>
+                        <button class="post-action comment-btn" data-comment="${post.id}">💬 <span class="post-action-count">${post.comments.length}</span></button>
+                    </div>
+                    <div class="post-likes">❤ ${post.likes.length} отметок "Нравится"</div>
+                    ${post.comments.length ? `<div class="post-comments-link" data-comment="${post.id}" style="padding:0 15px;font-size:0.75em;color:#888;cursor:pointer;margin-bottom:6px;">Смотреть комментарии (${post.comments.length})</div>` : ''}
+                    <div class="post-add-comment">
+                        <input type="text" placeholder="Добавить комментарий..." data-input="${post.id}">
+                        <button data-send="${post.id}">Опубл.</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            attachHandlers();
+        }
+
+        function attachHandlers() {
+            document.querySelectorAll('.like-btn').forEach(btn => { btn.addEventListener('click', () => { toggleLike(btn.dataset.like); renderFeed(); if (document.getElementById('profilePage').classList.contains('active')) updateMyProfile(); }); });
+            document.querySelectorAll('.subscribe-btn').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); toggleFollow(btn.dataset.sub); renderFeed(); updateMyProfile(); }); });
+            document.querySelectorAll('[data-send]').forEach(btn => { btn.addEventListener('click', () => { const id = btn.dataset.send; const input = document.querySelector(`[data-input="${id}"]`); if (input?.value.trim()) { addComment(id, input.value); input.value = ''; renderFeed(); } }); });
+            document.querySelectorAll('[data-input]').forEach(input => { input.addEventListener('keydown', e => { if (e.key === 'Enter') { const btn = document.querySelector(`[data-send="${input.dataset.input}"]`); if (btn) btn.click(); } }); });
+            document.querySelectorAll('[data-comment], .post-comments-link').forEach(el => { el.addEventListener('click', () => openComments(el.dataset.comment)); });
+            document.querySelectorAll('[data-delete]').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); deletePost(btn.dataset.delete); renderFeed(); updateMyProfile(); }); });
+            document.querySelectorAll('.post-avatar, .post-user').forEach(el => { el.addEventListener('click', () => { const email = el.dataset.user; if (email === currentUser) document.querySelector('.nav-item[data-page="profilePage"]').click(); else openUserProfile(email); }); });
+        }
+
+        function openComments(postId) {
+            const post = DB.posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+            
+            let html = '<div style="text-align:center;color:#555;padding:40px;">Нет комментариев</div>';
+            if (post.comments.length) {
+                html = post.comments.map(c => {
+                    const cu = getUser(c.user);
+                    return `<div class="comment">
+                        <div class="comment-avatar">${cu?.avatar ? '<img src="'+cu.avatar+'">' : '👤'}</div>
+                        <div class="comment-body">
+                            <div class="comment-user">${cu?.nickname || 'user'}</div>
+                            <div class="comment-text">${c.text}</div>
+                            <div class="comment-time">${timeAgo(c.createdAt)}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+            
+            overlay.innerHTML = `
+                <div class="overlay-header"><button class="close-overlay">←</button><h3>Комментарии (${post.comments.length})</h3></div>
+                <div class="comments-list">${html}</div>
+                <div class="comment-input-area">
+                    <input type="text" placeholder="Написать..." id="cinput${postId}">
+                    <button id="csend${postId}">Отпр.</button>
+                </div>
+            `;
+            
+            document.body.appendChild(overlay);
+            overlay.querySelector('.close-overlay').addEventListener('click', () => { document.body.removeChild(overlay); });
+            overlay.querySelector(`#csend${postId}`).addEventListener('click', () => {
+                const input = overlay.querySelector(`#cinput${postId}`);
+                if (input.value.trim()) { addComment(postId, input.value); document.body.removeChild(overlay); renderFeed(); }
+            });
+        }
+
+        // ============ ПРОФИЛЬ ============
+        function updateMyProfile() {
+            const user = getMe();
+            if (!user) return;
+            
+            const userPosts = DB.posts.filter(p => p.author === currentUser).sort((a, b) => b.id.localeCompare(a.id));
+            const container = document.getElementById('myProfileContent');
+            
+            container.innerHTML = `
+                <div class="profile-header-page">
+                    <div class="profile-avatar-large" id="profileAvatarLarge">${user.avatar ? '<img src="'+user.avatar+'">' : '👤'}</div>
+                    <div class="profile-nickname-display">${user.nickname}</div>
+                    <div class="profile-email-display">📧 ${user.email}</div>
+                    <div class="profile-stats-row">
+                        <div class="profile-stat-item"><div class="profile-stat-num">${userPosts.length}</div><div class="profile-stat-label">постов</div></div>
+                        <div class="profile-stat-item" id="followersStat"><div class="profile-stat-num">${user.followers.length}</div><div class="profile-stat-label">подписчиков</div></div>
+                        <div class="profile-stat-item" id="followingStat"><div class="profile-stat-num">${user.following.length}</div><div class="profile-stat-label">подписок</div></div>
+                    </div>
+                    <div><button class="profile-action-btn" id="editProfileBtn">✏️ Ред.</button><button class="profile-action-btn" id="logoutBtn">🚪 Выйти</button></div>
+                </div>
+                <div class="profile-posts-grid" id="profilePostsGrid">
+                    ${!userPosts.length ? '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-icon">📸</div><p>Нет постов</p></div>' : ''}
+                </div>
+            `;
+            
+            const grid = container.querySelector('#profilePostsGrid');
+            userPosts.forEach(post => {
+                const thumb = document.createElement('div');
+                thumb.className = 'profile-post-thumb';
+                thumb.innerHTML = post.type === 'image' ? '<img src="'+post.url+'" loading="lazy">' : '<video src="'+post.url+'" muted></video><div class="video-icon">🎬</div>';
+                if (post.likes.length) { const lel = document.createElement('div'); lel.className = 'likes-count'; lel.textContent = '❤ ' + post.likes.length; thumb.appendChild(lel); }
+                thumb.addEventListener('click', () => openPostViewer(post));
+                grid.appendChild(thumb);
+            });
+            
+            container.querySelector('#editProfileBtn').addEventListener('click', () => { const n = prompt('Никнейм:', user.nickname); if (n?.trim()) { user.nickname = n.trim(); saveDB(); updateMyProfile(); renderFeed(); } });
+            container.querySelector('#logoutBtn').addEventListener('click', () => { if (confirm('Выйти?')) { currentUser = null; localStorage.removeItem('lifetok_current_user'); document.getElementById('mainScreen').classList.remove('active'); document.getElementById('authScreen').style.display = 'flex'; } });
+            container.querySelector('#profileAvatarLarge').addEventListener('click', () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.addEventListener('change', e => { const f = e.target.files[0]; if (f?.type.startsWith('image/')) { const r = new FileReader(); r.onload = e => { user.avatar = e.target.result; saveDB(); updateMyProfile(); renderFeed(); }; r.readAsDataURL(f); } }); inp.click(); });
+            container.querySelector('#followersStat').addEventListener('click', () => showUsersList('Подписчики', user.followers));
+            container.querySelector('#followingStat').addEventListener('click', () => showUsersList('Подписки', user.following));
+        }
+
+        function openUserProfile(email) {
+            const user = getUser(email);
+            if (!user) return;
+            
+            const userPosts = DB.posts.filter(p => p.author === email).sort((a, b) => b.id.localeCompare(a.id));
+            const isFollowing = getMe().following.includes(email);
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-header"><button class="close-modal">← Назад</button><h3>${user.nickname}</h3></div>
+                <div style="text-align:center;padding:20px;">
+                    <div class="profile-avatar-large">${user.avatar ? '<img src="'+user.avatar+'">' : '👤'}</div>
+                    <div style="font-weight:700;margin-top:8px;">${user.nickname}</div>
+                    <div style="display:flex;justify-content:center;gap:25px;margin:15px 0;">
+                        <div><strong>${userPosts.length}</strong><br><span style="color:#888;font-size:0.7em;">постов</span></div>
+                        <div><strong>${user.followers.length}</strong><br><span style="color:#888;font-size:0.7em;">подписчиков</span></div>
+                        <div><strong>${user.following.length}</strong><br><span style="color:#888;font-size:0.7em;">подписок</span></div>
+                    </div>
+                    <button class="subscribe-btn ${isFollowing ? 'subscribed' : ''}" id="subBtn" data-sub="${email}">${isFollowing ? '✓ Вы подписаны' : '+ Подписаться'}</button>
+                </div>
+                <div class="profile-posts-grid">
+                    ${userPosts.map(p => '<div class="profile-post-thumb">' + (p.type === 'image' ? '<img src="'+p.url+'">' : '<video src="'+p.url+'" muted></video><div class="video-icon">🎬</div>') + (p.likes.length ? '<div class="likes-count">❤ '+p.likes.length+'</div>' : '') + '</div>').join('')}
+                    ${!userPosts.length ? '<div class="empty-state" style="grid-column:1/-1;"><p>Нет постов</p></div>' : ''}
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            modal.querySelector('.close-modal').addEventListener('click', () => { document.body.removeChild(modal); });
+            modal.querySelector('#subBtn').addEventListener('click', () => { toggleFollow(email); document.body.removeChild(modal); renderFeed(); updateMyProfile(); });
+        }
+
+        function openPostViewer(post) {
+            const author = getUser(post.author);
+            const viewer = document.createElement('div');
+            viewer.className = 'overlay';
+            viewer.innerHTML = `
+                <div class="overlay-header"><button class="close-viewer">←</button><div style="display:flex;align-items:center;gap:10px;"><div class="comment-avatar">${author?.avatar ? '<img src="'+author.avatar+'">' : '👤'}</div><strong>${author?.nickname || ''}</strong></div></div>
+                <div style="flex:1;display:flex;align-items:center;justify-content:center;background:#000;">${post.type === 'image' ? '<img src="'+post.url+'" style="max-width:100%;max-height:100%;object-fit:contain;">' : '<video controls autoplay src="'+post.url+'" style="max-width:100%;max-height:100%;"></video>'}</div>
+            `;
+            document.body.appendChild(viewer);
+            viewer.querySelector('.close-viewer').addEventListener('click', () => { document.body.removeChild(viewer); });
+        }
+
+        // ============ ПОИСК ============
+        function renderSearch(filter) {
+            const container = document.getElementById('searchResults');
+            let users = Object.keys(DB.users).filter(e => e !== currentUser).map(e => DB.users[e]);
+            
+            if (filter) { const f = filter.toLowerCase(); users = users.filter(u => u.nickname.toLowerCase().includes(f) || u.email.toLowerCase().includes(f)); }
+            
+            if (!users.length) { container.innerHTML = '<div class="empty-state"><p>' + (filter ? 'Никого не найдено' : 'Нет пользователей') + '</p></div>'; return; }
+            
+            container.innerHTML = users.map(u => {
+                const isFollowing = getMe().following.includes(u.email);
+                return `<div class="user-item" data-user="${u.email}">
+                    <div class="user-item-avatar">${u.avatar ? '<img src="'+u.avatar+'">' : '👤'}</div>
+                    <div class="user-item-info"><div class="user-item-name">${u.nickname}</div><div class="user-item-stats">📸 ${DB.posts.filter(p => p.author === u.email).length} · 👥 ${u.followers.length}</div></div>
+                    <button class="subscribe-btn ${isFollowing ? 'subscribed' : ''}" data-sub="${u.email}">${isFollowing ? '✓' : '+'}</button>
+                </div>`;
+            }).join('');
+            
+            container.querySelectorAll('.user-item').forEach(item => { item.addEventListener('click', e => { if (e.target.tagName === 'BUTTON') return; openUserProfile(item.dataset.user); }); });
+            container.querySelectorAll('.subscribe-btn').forEach(btn => { btn.addEventListener('click', e => { e.stopPropagation(); toggleFollow(btn.dataset.sub); renderSearch(document.getElementById('searchInput').value); renderFeed(); updateMyProfile(); }); });
+        }
+
+        document.getElementById('searchInput').addEventListener('input', function() { renderSearch(this.value); });
+
+        function showUsersList(title, list) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `<div class="modal-header"><button class="close-modal">←</button><h3>${title} (${list.length})</h3></div><div class="user-list">${list.map(e => { const u = getUser(e); return u ? '<div class="user-item" data-user="'+e+'"><div class="user-item-avatar">'+(u.avatar?'<img src="'+u.avatar+'">':'👤')+'</div><div class="user-item-info"><div class="user-item-name">'+u.nickname+'</div></div></div>' : ''; }).join('')}${!list.length?'<div class="empty-state"><p>Пока никого</p></div>':''}</div>`;
+            document.body.appendChild(modal);
+            modal.querySelector('.close-modal').addEventListener('click', () => { document.body.removeChild(modal); });
+            modal.querySelectorAll('.user-item').forEach(item => { item.addEventListener('click', () => { document.body.removeChild(modal); if (item.dataset.user !== currentUser) openUserProfile(item.dataset.user); }); });
+        }
+
+        function formatDate(date) {
+            if (!date) return '';
+            const d = new Date(date), months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+            return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+        }
+
+        function timeAgo(iso) {
+            if (!iso) return '';
+            const s = Math.floor((new Date() - new Date(iso)) / 1000);
+            if (s < 60) return 'только что';
+            if (s < 3600) return Math.floor(s/60) + ' мин';
+            if (s < 86400) return Math.floor(s/3600) + ' ч';
+            return Math.floor(s/86400) + ' дн';
+        }
+    </script>
+</body>
+</html>
